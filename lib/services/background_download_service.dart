@@ -72,7 +72,8 @@ class BackgroundDownloadService {
         fileName: fileName,
         showNotification: true,
         openFileFromNotification: false,
-        saveInPublicStorage: true,
+        saveInPublicStorage:
+            false, // Using scoped storage with MediaStore instead
         requiresStorageNotLow: false,
       );
 

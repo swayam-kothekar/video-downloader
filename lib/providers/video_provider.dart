@@ -119,27 +119,7 @@ class VideoProvider extends ChangeNotifier {
     }
 
     try {
-      print('VideoProvider: Requesting storage permission...');
-      // Request storage permission
-      final hasPermission = await _storageService.requestStoragePermission();
-      if (!hasPermission) {
-        print('VideoProvider: Storage permission denied');
-        _errorMessage = 'Storage permission denied';
-        _state = VideoState.error;
-        notifyListeners();
-        return;
-      }
-
-      // Request notification permission (required for Android 13+)
-      print('VideoProvider: Requesting notification permission...');
-      final hasNotificationPermission = await _storageService
-          .requestNotificationPermission();
-      if (!hasNotificationPermission) {
-        print('VideoProvider: Notification permission denied');
-        // Continue anyway - downloads will work but without notifications
-      }
-
-      print('VideoProvider: Permission granted, preparing download...');
+      print('VideoProvider: Preparing download...');
 
       _retryCount = 0; // Reset retry count for new download
       _state = VideoState.downloading;
@@ -149,7 +129,7 @@ class VideoProvider extends ChangeNotifier {
       notifyListeners();
 
       final stream = _availableStreams[_selectedQuality]!;
-      final downloadDir = await _storageService.getDownloadDirectory();
+      final downloadDir = await _storageService.getTempDownloadDirectory();
 
       print('VideoProvider: Download directory: $downloadDir');
 
@@ -270,22 +250,58 @@ class VideoProvider extends ChangeNotifier {
 
     _backgroundDownloadService.onCompleteCallback = (taskId) async {
       if (taskId == _currentDownloadId && _currentVideo != null) {
-        // Create download log
-        final log = DownloadLog(
-          videoTitle: _currentVideo!.title,
-          quality: _selectedQuality,
-          downloadDate: DateTime.now(),
-          isSuccess: true,
-        );
-        _downloadLogs.insert(0, log);
-        await _storageService.saveDownloadLogs(_downloadLogs);
+        try {
+          print(
+            'VideoProvider: Download complete, moving to public Downloads...',
+          );
+          _downloadStatus = 'Saving to Downloads...';
+          notifyListeners();
 
-        _state = VideoState.downloaded;
-        _downloadProgress = 1.0;
-        _downloadStatus = 'Complete';
-        _currentDownloadId = null;
-        _retryCount = 0; // Reset retry count
-        notifyListeners();
+          // Get the temporary file path
+          final downloadDir = await _storageService.getTempDownloadDirectory();
+          String extension = 'mp4';
+          if (_selectedQuality == 'Audio Only') {
+            extension = 'm4a';
+          }
+          final fileName = _storageService.generateFileName(
+            _currentVideo!.title,
+            _selectedQuality,
+            extension,
+          );
+          final tempFilePath = '$downloadDir/$fileName';
+
+          // Move to public Downloads using MediaStore
+          await _storageService.saveToPublicDownloads(tempFilePath, fileName);
+
+          print('VideoProvider: File saved to public Downloads');
+
+          // Delete the temporary file
+          await _storageService.deleteFile(tempFilePath);
+
+          // Create download log
+          final log = DownloadLog(
+            videoTitle: _currentVideo!.title,
+            quality: _selectedQuality,
+            downloadDate: DateTime.now(),
+            isSuccess: true,
+          );
+          _downloadLogs.insert(0, log);
+          await _storageService.saveDownloadLogs(_downloadLogs);
+
+          _state = VideoState.downloaded;
+          _downloadProgress = 1.0;
+          _downloadStatus = 'Complete';
+          _currentDownloadId = null;
+          _retryCount = 0; // Reset retry count
+          notifyListeners();
+        } catch (e) {
+          print('VideoProvider: Error moving file to Downloads: $e');
+          _state = VideoState.error;
+          _errorMessage = 'Failed to save to Downloads: ${e.toString()}';
+          _downloadStatus = '';
+          _currentDownloadId = null;
+          notifyListeners();
+        }
       }
     };
 
@@ -306,7 +322,7 @@ class VideoProvider extends ChangeNotifier {
 
           // Retry the download
           final stream = _availableStreams[_selectedQuality]!;
-          final downloadDir = await _storageService.getDownloadDirectory();
+          final downloadDir = await _storageService.getTempDownloadDirectory();
 
           String extension = 'mp4';
           if (_selectedQuality == 'Audio Only') {

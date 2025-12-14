@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../providers/video_provider.dart';
 import '../utils/validators.dart';
 import '../utils/constants.dart';
@@ -28,112 +27,6 @@ class _HomeScreenState extends State<HomeScreen>
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: AppConstants.animationNormal),
-    );
-    // Request storage permissions on app startup
-    _requestPermissions();
-  }
-
-  Future<void> _requestPermissions() async {
-    final provider = Provider.of<VideoProvider>(context, listen: false);
-    final storageService = provider.storageService;
-
-    // Keep requesting until granted or permanently denied
-    bool hasPermission = await storageService.requestStoragePermission();
-
-    while (!hasPermission) {
-      // Check if permission is permanently denied
-      final status = await storageService.getPermissionStatus();
-
-      if (status == PermissionStatus.permanentlyDenied) {
-        // User explicitly denied with "Don't ask again"
-        _showPermissionDeniedDialog();
-        break;
-      }
-
-      // Show explanation dialog and request again
-      if (mounted) {
-        final shouldRetry = await _showPermissionRationaleDialog();
-        if (!shouldRetry) {
-          // User chose not to grant permission
-          break;
-        }
-
-        // Request permission again
-        hasPermission = await storageService.requestStoragePermission();
-      } else {
-        break;
-      }
-    }
-  }
-
-  Future<bool> _showPermissionRationaleDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppConstants.darkCard,
-            title: const Row(
-              children: [
-                Icon(Icons.folder_open, color: AppConstants.primaryPurple),
-                SizedBox(width: AppConstants.spaceSmall),
-                Expanded(
-                  child: Text(
-                    'Storage Permission Required',
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            content: const Text(
-              'This app needs storage permission to download and save YouTube videos to your device. '
-              'Without this permission, you won\'t be able to download videos.',
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryPurple,
-                ),
-                child: const Text('Grant Permission'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-  }
-
-  void _showPermissionDeniedDialog() {
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppConstants.darkCard,
-        title: const Row(
-          children: [
-            Icon(Icons.warning, color: Colors.orangeAccent),
-            SizedBox(width: AppConstants.spaceSmall),
-            Expanded(
-              child: Text('Permission Denied', overflow: TextOverflow.ellipsis),
-            ),
-          ],
-        ),
-        content: const Text(
-          'Storage permission was permanently denied. To download videos, please enable storage permission in your device settings.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
     );
   }
 
