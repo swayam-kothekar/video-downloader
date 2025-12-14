@@ -1,12 +1,10 @@
 # Video Downloader 🎥
 
-A powerful and feature-rich Flutter Android application for downloading YouTube videos with advanced capabilities including audio-video merging, quality selection, and comprehensive download management.
+A Flutter Android application for downloading YouTube videos.
 
 ## ✨ Features
 
 - **🎬 YouTube Video Download**: Download videos from YouTube using just the URL
-- **🎯 Quality Selection**: Choose from multiple available video qualities (360p, 720p, 1080p, etc.)
-- **🔊 Audio-Video Merging**: Automatic merging of separate audio and video streams for high-quality downloads using FFmpeg
 - **📊 Download Progress Tracking**: Real-time progress monitoring with detailed status updates
 - **📁 Download Management**: View and manage all downloaded videos in one place
 - **🖼️ Video Preview**: See video thumbnails, titles, and file sizes before downloading
@@ -41,12 +39,12 @@ A powerful and feature-rich Flutter Android application for downloading YouTube 
 
 1. **Launch the app** on your Android device
 2. **Paste or enter** a YouTube video URL in the text field
-3. **Tap "Fetch Video Info"** to load video details
+3. **Tap "Search Video"** to load video details
 4. **Review** the video preview with thumbnail, title, and file size
-5. **Select desired video quality** from available options
+5. **Select video or only audio** to be downloaded
 6. **Tap "Download"** to start the download
-7. **Monitor progress** in real-time (downloading video, downloading audio, merging)
-8. **Access downloads** via the Downloads screen or your device's Downloads folder
+7. **Monitor progress** in real-time
+8. **Access downloads** via your device's Downloads folder
 
 ---
 
@@ -63,8 +61,8 @@ A powerful and feature-rich Flutter Android application for downloading YouTube 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/video_downloader.git
-   cd video_downloader
+   git clone https://github.com/swayam-kothekar/video-downloader.git
+   cd video-downloader
    ```
 
 2. **Install dependencies**:
@@ -72,17 +70,7 @@ A powerful and feature-rich Flutter Android application for downloading YouTube 
    flutter pub get
    ```
 
-3. **Generate app icons** (optional):
-   ```bash
-   flutter pub run flutter_launcher_icons
-   ```
-
-4. **Generate splash screen** (optional):
-   ```bash
-   flutter pub run flutter_native_splash:create
-   ```
-
-5. **Run the app**:
+3. **Run the app**:
    ```bash
    flutter run
    ```
@@ -149,11 +137,8 @@ lib/
 
 1. **Video Extraction**: Uses `youtube_explode_dart` to extract video metadata and available streams
 2. **Quality Detection**: Identifies all available video qualities and presents them to the user
-3. **Stream Analysis**: Determines if audio and video are separate (common for 720p+)
-4. **Download Process**:
-   - Downloads video stream
-   - Downloads audio stream (if separate)
-   - Merges streams using FFmpeg into a single MP4 file
+3. **Stream Analysis**: Determines if audio and video are separate
+4. **Download Process**: Downloads video stream
 5. **Storage**: Saves final video to public Downloads folder using scoped storage
 6. **Cleanup**: Removes temporary files after successful merge
 
@@ -175,23 +160,6 @@ The app uses **scoped storage** for modern Android compatibility and enhanced us
 - ❌ **No broad storage permissions**: Uses scoped storage, targeting only the Downloads folder
 - 🔒 **Privacy-first**: No access to user's personal files or media
 
-## 🔧 Configuration
-
-### App Icon
-
-Place your app logo at `assets/images/logo.png` and run:
-```bash
-flutter pub run flutter_launcher_icons
-```
-
-### Splash Screen
-
-Configure splash screen colors in `pubspec.yaml`:
-```yaml
-flutter_native_splash:
-  color: "#1B3A6B"
-  image: assets/images/logo.png
-```
 
 ## 🐛 Troubleshooting
 
@@ -204,15 +172,6 @@ flutter_native_splash:
 - Verify the YouTube URL is valid and accessible
 - Some videos may have restrictions preventing downloads
 - Ensure sufficient storage space is available
-
-### Merge Failures
-- Ensure sufficient storage space
-- Check that FFmpeg is properly configured
-- Verify both audio and video streams downloaded successfully
-
-### Downloads Not Showing
-- Check your device's Downloads folder using a file manager
-- Downloaded videos are saved as `[VideoTitle]_[Quality].mp4`
 
 ## 📝 License
 
