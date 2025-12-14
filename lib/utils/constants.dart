@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   // App Information
-  static const String appName = 'YouTube Downloader';
+  static const String appName = 'Video Downloader';
   static const String appVersion = '1.0.0';
 
   // Colors - Vibrant gradient scheme

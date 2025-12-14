@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'YouTube Downloader',
+        title: 'Video Downloader',
         theme: AppTheme.darkTheme,
         debugShowCheckedModeBanner: false,
         home: const HomeScreen(),
