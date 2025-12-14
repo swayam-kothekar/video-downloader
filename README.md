@@ -10,12 +10,47 @@ A powerful and feature-rich Flutter Android application for downloading YouTube 
 - **📊 Download Progress Tracking**: Real-time progress monitoring with detailed status updates
 - **📁 Download Management**: View and manage all downloaded videos in one place
 - **🖼️ Video Preview**: See video thumbnails, titles, and file sizes before downloading
-- **💾 Smart Storage**: Downloads saved to public Downloads folder with proper organization
-- **🔐 Permission Handling**: Streamlined storage permission requests
+- **💾 Smart Storage**: Downloads saved to public Downloads folder with scoped storage access
+- **🔐 Modern Permissions**: Uses scoped storage for enhanced privacy and security
 - **🎨 Modern UI**: Beautiful and intuitive user interface with smooth animations
 - **📱 Responsive Design**: Optimized for various Android screen sizes
 
-## 🚀 Getting Started
+## 📲 Installation (For Users)
+
+### Download & Install from Releases
+
+1. **Download the APK**:
+   - Go to the [Releases](https://github.com/swayam-kothekar/video-downloader/releases) page
+   - Download the latest `.apk` file (e.g., `video-downloader-v1.0.0.apk`)
+
+2. **Enable Unknown Sources** (if needed):
+   - Go to **Settings** > **Security** or **Privacy**
+   - Enable **Install from Unknown Sources** or **Allow from this source** for your browser/file manager
+
+3. **Install the APK**:
+   - Open the downloaded APK file
+   - Tap **Install**
+   - Wait for the installation to complete
+   - Tap **Open** to launch the app
+
+4. **Grant Permissions**:
+   - The app will request notification permission for download progress tracking
+   - Grant the permission to enable background downloads with progress notifications
+
+### Usage
+
+1. **Launch the app** on your Android device
+2. **Paste or enter** a YouTube video URL in the text field
+3. **Tap "Fetch Video Info"** to load video details
+4. **Review** the video preview with thumbnail, title, and file size
+5. **Select desired video quality** from available options
+6. **Tap "Download"** to start the download
+7. **Monitor progress** in real-time (downloading video, downloading audio, merging)
+8. **Access downloads** via the Downloads screen or your device's Downloads folder
+
+---
+
+## 🛠️ Development Setup (For Developers)
 
 ### Prerequisites
 
@@ -52,16 +87,15 @@ A powerful and feature-rich Flutter Android application for downloading YouTube 
    flutter run
    ```
 
-## 📱 Usage
+### Build Release APK
 
-1. **Launch the app** on your Android device
-2. **Paste or enter** a YouTube video URL in the text field
-3. **Tap "Fetch Video Info"** to load video details
-4. **Review** the video preview with thumbnail, title, and file size
-5. **Select desired video quality** from available options
-6. **Tap "Download"** to start the download
-7. **Monitor progress** in real-time (downloading video, downloading audio, merging)
-8. **Access downloads** via the Downloads screen
+To create a release build:
+
+```bash
+flutter build apk --release
+```
+
+The APK will be generated at `build/app/outputs/flutter-apk/app-release.apk`.
 
 ## 🛠️ Technical Details
 
@@ -104,7 +138,7 @@ lib/
 | `dio` | HTTP client for downloading |
 | `flutter_downloader` | Background download management |
 | `path_provider` | File system path access |
-| `permission_handler` | Storage permission handling |
+| `permission_handler` | Permission handling |
 | `provider` | State management |
 | `cached_network_image` | Efficient image loading and caching |
 | `google_fonts` | Custom typography |
@@ -120,8 +154,26 @@ lib/
    - Downloads video stream
    - Downloads audio stream (if separate)
    - Merges streams using FFmpeg into a single MP4 file
-5. **Storage**: Saves final video to public Downloads folder with proper naming
+5. **Storage**: Saves final video to public Downloads folder using scoped storage
 6. **Cleanup**: Removes temporary files after successful merge
+
+### Permissions
+
+The app uses **scoped storage** for modern Android compatibility and enhanced user privacy:
+
+```xml
+<!-- Required permissions in AndroidManifest.xml -->
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+```
+
+**Key Points**:
+- ✅ **INTERNET**: Required for downloading videos from YouTube
+- ✅ **FOREGROUND_SERVICE**: Enables background downloads with persistent notifications
+- ✅ **POST_NOTIFICATIONS**: Shows download progress notifications (Android 13+)
+- ❌ **No broad storage permissions**: Uses scoped storage, targeting only the Downloads folder
+- 🔒 **Privacy-first**: No access to user's personal files or media
 
 ## 🔧 Configuration
 
@@ -141,30 +193,26 @@ flutter_native_splash:
   image: assets/images/logo.png
 ```
 
-### Storage Permissions
-
-The app automatically requests necessary storage permissions. Ensure your `AndroidManifest.xml` includes:
-```xml
-<uses-permission android:name="android.permission.INTERNET"/>
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-```
-
 ## 🐛 Troubleshooting
 
 ### Permission Issues
-- Ensure storage permissions are granted in device settings
-- The app will request permissions until granted
+- The app will request notification permission on first launch (Android 13+)
+- If notifications don't appear, check Settings > Apps > Video Downloader > Notifications
 
 ### Download Failures
 - Check internet connectivity
 - Verify the YouTube URL is valid and accessible
 - Some videos may have restrictions preventing downloads
+- Ensure sufficient storage space is available
 
 ### Merge Failures
 - Ensure sufficient storage space
 - Check that FFmpeg is properly configured
 - Verify both audio and video streams downloaded successfully
+
+### Downloads Not Showing
+- Check your device's Downloads folder using a file manager
+- Downloaded videos are saved as `[VideoTitle]_[Quality].mp4`
 
 ## 📝 License
 
@@ -173,6 +221,12 @@ This project is for educational purposes. Please respect YouTube's Terms of Serv
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📧 Contact
 
