@@ -19,7 +19,7 @@ A Flutter Android application for downloading YouTube videos.
 
 1. **Download the APK**:
    - Go to the [Releases](https://github.com/swayam-kothekar/video-downloader/releases) page
-   - Download the latest `.apk` file (e.g., `video-downloader-v1.0.0.apk`)
+   - Download the latest `.apk` file
 
 2. **Enable Unknown Sources** (if needed):
    - Go to **Settings** > **Security** or **Privacy**
