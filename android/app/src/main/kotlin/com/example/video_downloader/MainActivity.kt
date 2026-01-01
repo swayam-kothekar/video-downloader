@@ -1,6 +1,7 @@
 package com.example.video_downloader
 
 import android.content.ContentValues
+import android.content.Intent
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -12,12 +13,14 @@ import java.io.FileInputStream
 import java.io.OutputStream
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.example.video_downloader/storage"
+    private val STORAGE_CHANNEL = "com.example.video_downloader/storage"
+    private val SHARE_CHANNEL = "com.example.video_downloader/share"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        // Storage channel for saving files to Downloads
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, STORAGE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "saveToDownloads" -> {
                     val filePath = call.argument<String>("filePath")
@@ -38,6 +41,20 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        
+        // Share channel for receiving shared URLs
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARE_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getSharedUrl" -> {
+                    val sharedUrl = handleIntent(intent)
+                    result.success(sharedUrl)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        
+        // Handle intent when app is first launched with a shared URL
+        handleIntent(intent)
     }
 
     private fun saveFileToDownloads(sourceFilePath: String, displayName: String): String {
@@ -88,5 +105,40 @@ class MainActivity : FlutterActivity() {
             inputStream?.close()
             outputStream?.close()
         }
+    }
+    
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+    
+    private fun handleIntent(intent: Intent?) {
+        if (intent == null) return
+        
+        val sharedUrl = when (intent.action) {
+            Intent.ACTION_SEND -> {
+                if (intent.type == "text/plain") {
+                    intent.getStringExtra(Intent.EXTRA_TEXT)
+                } else null
+            }
+            Intent.ACTION_VIEW -> {
+                intent.dataString
+            }
+            else -> null
+        }
+        
+        // Send the URL to Flutter via the share channel
+        sharedUrl?.let { url ->
+            if (isYouTubeUrl(url)) {
+                flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                    MethodChannel(messenger, SHARE_CHANNEL).invokeMethod("onSharedUrl", url)
+                }
+            }
+        }
+    }
+    
+    private fun isYouTubeUrl(url: String): Boolean {
+        return url.contains("youtube.com") || url.contains("youtu.be")
     }
 }

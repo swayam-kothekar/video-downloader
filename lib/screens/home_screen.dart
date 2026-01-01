@@ -28,6 +28,30 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: AppConstants.animationNormal),
     );
+    _setupShareListener();
+  }
+
+  void _setupShareListener() {
+    const platform = MethodChannel('com.example.video_downloader/share');
+
+    // Set up listener for incoming shared URLs
+    platform.setMethodCallHandler((call) async {
+      if (call.method == 'onSharedUrl') {
+        final String? sharedUrl = call.arguments as String?;
+        if (sharedUrl != null && mounted) {
+          setState(() {
+            _urlController.text = sharedUrl;
+            _isValidUrl = Validators.isValidYouTubeUrl(sharedUrl);
+          });
+
+          // Automatically fetch video info if URL is valid
+          if (_isValidUrl) {
+            final provider = Provider.of<VideoProvider>(context, listen: false);
+            provider.fetchVideoInfo(sharedUrl);
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -160,14 +184,16 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildGetInfoButton(VideoProvider provider) {
+    final bool isEnabled = _isValidUrl && provider.state != VideoState.loading;
+
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        gradient: _isValidUrl ? AppConstants.primaryGradient : null,
-        color: !_isValidUrl ? Colors.white24 : null,
+        gradient: isEnabled ? AppConstants.primaryGradient : null,
+        color: !isEnabled ? Colors.white24 : null,
         borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-        boxShadow: _isValidUrl
+        boxShadow: isEnabled
             ? [
                 BoxShadow(
                   color: AppConstants.primaryPurple.withOpacity(0.4),
@@ -180,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _isValidUrl
+          onTap: isEnabled
               ? () => provider.fetchVideoInfo(_urlController.text)
               : null,
           borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
@@ -190,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen>
               children: [
                 Icon(
                   Icons.search,
-                  color: _isValidUrl ? Colors.white : Colors.white38,
+                  color: isEnabled ? Colors.white : Colors.white38,
                 ),
                 const SizedBox(width: AppConstants.spaceSmall),
                 Text(
@@ -198,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: _isValidUrl ? Colors.white : Colors.white38,
+                    color: isEnabled ? Colors.white : Colors.white38,
                   ),
                 ),
               ],
