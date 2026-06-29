@@ -15,6 +15,7 @@ import java.io.OutputStream
 class MainActivity : FlutterActivity() {
     private val STORAGE_CHANNEL = "com.example.video_downloader/storage"
     private val SHARE_CHANNEL = "com.example.video_downloader/share"
+    private var initialSharedUrl: String? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -46,15 +47,23 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SHARE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getSharedUrl" -> {
-                    val sharedUrl = handleIntent(intent)
-                    result.success(sharedUrl)
+                    val urlToReturn = initialSharedUrl ?: processIntent(intent)
+                    initialSharedUrl = null // Clear after returning once
+                    result.success(urlToReturn)
                 }
                 else -> result.notImplemented()
             }
         }
         
-        // Handle intent when app is first launched with a shared URL
-        handleIntent(intent)
+        // Process intent when app is first launched
+        val extracted = processIntent(intent)
+        if (extracted != null) {
+            initialSharedUrl = extracted
+            // Also attempt to notify Flutter directly if listener is already registered
+            flutterEngine.dartExecutor.binaryMessenger.let { messenger ->
+                MethodChannel(messenger, SHARE_CHANNEL).invokeMethod("onSharedUrl", extracted)
+            }
+        }
     }
 
     private fun saveFileToDownloads(sourceFilePath: String, displayName: String): String {
@@ -124,13 +133,19 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIntent(intent)
+        val extracted = processIntent(intent)
+        if (extracted != null) {
+            initialSharedUrl = extracted
+            flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
+                MethodChannel(messenger, SHARE_CHANNEL).invokeMethod("onSharedUrl", extracted)
+            }
+        }
     }
     
-    private fun handleIntent(intent: Intent?) {
-        if (intent == null) return
+    private fun processIntent(intent: Intent?): String? {
+        if (intent == null) return null
         
-        val sharedUrl = when (intent.action) {
+        val rawText = when (intent.action) {
             Intent.ACTION_SEND -> {
                 if (intent.type == "text/plain") {
                     intent.getStringExtra(Intent.EXTRA_TEXT)
@@ -142,14 +157,15 @@ class MainActivity : FlutterActivity() {
             else -> null
         }
         
-        // Send the URL to Flutter via the share channel
-        sharedUrl?.let { url ->
-            if (isYouTubeUrl(url)) {
-                flutterEngine?.dartExecutor?.binaryMessenger?.let { messenger ->
-                    MethodChannel(messenger, SHARE_CHANNEL).invokeMethod("onSharedUrl", url)
-                }
-            }
-        }
+        return extractYouTubeUrl(rawText)
+    }
+    
+    private fun extractYouTubeUrl(text: String?): String? {
+        if (text.isNullOrBlank()) return null
+        // Regex to extract clean YouTube URL from shared text (e.g. "Check out this video https://youtu.be/xyz")
+        val regex = Regex("""https?://(?:www\.|m\.)?(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/)[a-zA-Z0-9_-]+[^\s]*""")
+        val match = regex.find(text)
+        return match?.value ?: if (isYouTubeUrl(text)) text.trim() else null
     }
     
     private fun isYouTubeUrl(url: String): Boolean {

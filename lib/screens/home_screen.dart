@@ -42,16 +42,16 @@ class _HomeScreenState extends State<HomeScreen>
   void _setupShareListener() {
     const platform = MethodChannel('com.example.video_downloader/share');
 
-    platform.setMethodCallHandler((call) async {
-      if (call.method == 'onSharedUrl') {
-        final String? sharedUrl = call.arguments as String?;
-        if (sharedUrl != null && mounted) {
-          setState(() {
-            _urlController.text = sharedUrl;
-            _isValidUrl = Validators.isValidYouTubeUrl(sharedUrl);
-          });
+    void handleUrl(String? sharedUrl) {
+      if (sharedUrl != null && sharedUrl.isNotEmpty && mounted) {
+        setState(() {
+          _urlController.text = sharedUrl;
+          _isValidUrl = Validators.isValidYouTubeUrl(sharedUrl);
+        });
 
-          if (_isValidUrl) {
+        if (_isValidUrl) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
             final provider = Provider.of<VideoProvider>(context, listen: false);
             final themeProvider = Provider.of<ThemeProvider>(
               context,
@@ -61,10 +61,22 @@ class _HomeScreenState extends State<HomeScreen>
               sharedUrl,
               defaultQuality: themeProvider.defaultQuality,
             );
-          }
+          });
         }
       }
+    }
+
+    platform.setMethodCallHandler((call) async {
+      if (call.method == 'onSharedUrl') {
+        final String? sharedUrl = call.arguments as String?;
+        handleUrl(sharedUrl);
+      }
     });
+
+    // Check for initial shared URL when app is opened via share target
+    platform.invokeMethod<String>('getSharedUrl').then((sharedUrl) {
+      handleUrl(sharedUrl);
+    }).catchError((_) {});
   }
 
   VideoProvider? _videoProvider;
