@@ -4,17 +4,16 @@ A Flutter Android application for downloading YouTube videos directly to your de
 
 ## Features
 
-- ** Direct YouTube Extraction**: Extract video metadata and download videos seamlessly with native in-app streaming technology.
-- ** Fast 360p Download Standard**: Streams are optimized at 360p resolution for maximum download speeds, low latency, and efficient storage usage.
-- ** Parallel & Sequential Downloads**: Process multiple downloads simultaneously with clear multi-stage status tracking, speed metrics, and progress bars.
-- ** Smart Resume (Chunk-based Downloading)**: Automatically detects partial or interrupted downloads and resumes the task from the last saved byte offset, avoiding unnecessary data usage.
-- ** Wi-Fi Only Mode**: Prevent mobile data charges by forcing downloads to pause automatically when switching to cellular networks, resuming when connected back to Wi-Fi.
-- ** Subtitle & Closed Caption Downloader**: Fetch closed caption tracks (.srt/.vtt) automatically alongside media files.
-- ** Scoped Storage Compliance**: Fully targets Android Scoped Storage using `MediaStore` API. Downloads are placed directly into the public `Downloads` directory with **zero broad storage permissions** required.
-- ** Real-time Metrics & Persistent Logs**: View current download speed (KB/s, MB/s), progress percentages, and status alerts. Keeps a persistent log of recent download operations.
-- ** Cache Maintenance**: Monitor the size of temporary files in the app cache and clear them directly within app settings.
-- ** Modern Theme Engine**: Beautiful UI with smooth micro-animations, radial gradient accents, and dynamic support for Light Mode, Dark Mode, and System Default themes.
-- ** In-app Update Engine**: Auto-checks GitHub Releases API on startup, prompting the user with a changelog and download link when updates are available.
+- **Direct YouTube Extraction**: Extract video metadata and download videos seamlessly with native in-app streaming technology.
+- **Parallel & Sequential Downloads**: Process multiple downloads simultaneously with clear multi-stage status tracking, speed metrics, and progress bars.
+- **Smart Resume (Chunk-based Downloading)**: Automatically detects partial or interrupted downloads and resumes the task from the last saved byte offset, avoiding unnecessary data usage.
+- **Wi-Fi Only Mode**: Prevent mobile data charges by forcing downloads to pause automatically when switching to cellular networks, resuming when connected back to Wi-Fi.
+- **Subtitle & Closed Caption Downloader**: Fetch closed caption tracks (.srt/.vtt) automatically alongside media files.
+- **Scoped Storage Compliance**: Fully targets Android Scoped Storage using `MediaStore` API. Downloads are placed directly into the public `Downloads` directory with **zero broad storage permissions** required.
+- **Real-time Metrics & Persistent Logs**: View current download speed (KB/s, MB/s), progress percentages, and status alerts. Keeps a persistent log of recent download operations.
+- **Cache Maintenance**: Monitor the size of temporary files in the app cache and clear them directly within app settings.
+- **Modern Theme Engine**: Beautiful UI with smooth micro-animations, radial gradient accents, and dynamic support for Light Mode, Dark Mode, and System Default themes.
+- **In-app Update Engine**: Auto-checks GitHub Releases API on startup, prompting the user with a changelog and download link when updates are available.
 
 ## Installation (For Users)
 
@@ -139,10 +138,9 @@ lib/
 ### How It Works
 
 1. **Video Extraction**: Uses `youtube_explode_dart` directly within the app to extract video metadata and stream URL links.
-2. **Stream Resolution**: Automatically resolves optimal 360p streams for instant downloading without complex setup.
-3. **Sequential Stream Downloading**: Handles dual video/audio stream processing sequentially with live state updates.
-4. **Storage**: Saves final video files directly to the public Downloads folder using Android Scoped Storage (`MediaStore`).
-5. **Cleanup**: Automatically cleans up temporary streams and buffers upon completion.
+2. **Sequential Stream Downloading**: Handles dual video/audio stream processing sequentially with live state updates.
+3. **Storage**: Saves final video files directly to the public Downloads folder using Android Scoped Storage (`MediaStore`).
+4. **Cleanup**: Automatically cleans up temporary streams and buffers upon completion.
 
 ### Permissions
 
