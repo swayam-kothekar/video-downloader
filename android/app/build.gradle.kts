@@ -57,7 +57,8 @@ android {
 
     buildTypes {
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
+            val hasKeystore = keystorePropertiesFile.exists() && keystoreProperties.getProperty("storeFile") != null
+            signingConfig = if (hasKeystore) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
             isMinifyEnabled = false
             isShrinkResources = false
         }
