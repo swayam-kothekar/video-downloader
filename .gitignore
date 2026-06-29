@@ -21,18 +21,20 @@ migrate_working_dir/
 # VS Code
 .vscode/
 
-# Flutter/Dart/Pub related (configured to work inside subdirectories)
-**/doc/api/
-**/ios/Flutter/.last_build_id
-**/.dart_tool/
-**/.flutter-plugins-dependencies
-**/.pub-cache/
-**/.pub/
-**/build/
-**/coverage/
-**/android/app/debug/
-**/android/app/profile/
-**/android/app/release/
+# Flutter/Dart/Pub related
+/doc/api/
+/ios/Flutter/.last_build_id
+/.dart_tool/
+/.flutter-plugins-dependencies
+/.pub-cache/
+/.pub/
+/build/
+/coverage/
+
+# Android related
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
 
 # Symbolication and Obfuscation
 app.*.symbols
@@ -61,4 +63,4 @@ env/
 *.webm
 *.part
 *.ytdl
-**/downloads/
+/downloads/
