@@ -1,4 +1,4 @@
-# Video Downloader 🎥
+# Video Downloader
 
 A Flutter Android application for downloading YouTube videos directly to your device.
 
