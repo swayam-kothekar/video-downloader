@@ -45,13 +45,15 @@ class DownloadProgressCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  status,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: MarqueeText(
+                    text: status,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Row(
@@ -115,6 +117,101 @@ class DownloadProgressCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class MarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+
+  const MarqueeText({
+    super.key,
+    required this.text,
+    this.style,
+  });
+
+  @override
+  State<MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<MarqueeText> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isScrolling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndStartScrolling());
+  }
+
+  @override
+  void didUpdateWidget(MarqueeText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndStartScrolling());
+    }
+  }
+
+  void _checkAndStartScrolling() async {
+    if (!mounted || _isScrolling) return;
+    if (!_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) return;
+
+    _isScrolling = true;
+
+    while (mounted && _scrollController.hasClients) {
+      final currentMax = _scrollController.position.maxScrollExtent;
+      if (currentMax <= 0) break;
+
+      final durationMs = (currentMax * 40).toInt().clamp(1500, 10000);
+
+      // Start scrolling immediately
+      await _scrollController.animateTo(
+        currentMax,
+        duration: Duration(milliseconds: durationMs),
+        curve: Curves.easeInOut,
+      );
+
+      if (!mounted || !_scrollController.hasClients) break;
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (!mounted || !_scrollController.hasClients) break;
+
+      await _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOut,
+      );
+
+      if (!mounted || !_scrollController.hasClients) break;
+      await Future.delayed(const Duration(milliseconds: 600));
+    }
+
+    _isScrolling = false;
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Text(
+        widget.text,
+        style: widget.style,
+        maxLines: 1,
       ),
     );
   }
