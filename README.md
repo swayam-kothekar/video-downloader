@@ -2,21 +2,21 @@
 
 A Flutter Android application for downloading YouTube videos directly to your device.
 
-## ✨ Features
+## Features
 
-- **🎬 Direct YouTube Extraction**: Extract video metadata and download videos seamlessly with native in-app streaming technology.
-- **⚡ Fast 360p Download Standard**: Streams are optimized at 360p resolution for maximum download speeds, low latency, and efficient storage usage.
-- **⚡ Parallel & Sequential Downloads**: Process multiple downloads simultaneously with clear multi-stage status tracking, speed metrics, and progress bars.
-- **🔄 Smart Resume (Chunk-based Downloading)**: Automatically detects partial or interrupted downloads and resumes the task from the last saved byte offset, avoiding unnecessary data usage.
-- **📶 Wi-Fi Only Mode**: Prevent mobile data charges by forcing downloads to pause automatically when switching to cellular networks, resuming when connected back to Wi-Fi.
-- **💬 Subtitle & Closed Caption Downloader**: Fetch closed caption tracks (.srt/.vtt) automatically alongside media files.
-- **💾 Scoped Storage Compliance**: Fully targets Android Scoped Storage using `MediaStore` API. Downloads are placed directly into the public `Downloads` directory with **zero broad storage permissions** required.
-- **📊 Real-time Metrics & Persistent Logs**: View current download speed (KB/s, MB/s), progress percentages, and status alerts. Keeps a persistent log of recent download operations.
-- **🧼 Cache Maintenance**: Monitor the size of temporary files in the app cache and clear them directly within app settings.
-- **🎨 Modern Theme Engine**: Beautiful UI with smooth micro-animations, radial gradient accents, and dynamic support for Light Mode, Dark Mode, and System Default themes.
-- **🚀 In-app Update Engine**: Auto-checks GitHub Releases API on startup, prompting the user with a changelog and download link when updates are available.
+- ** Direct YouTube Extraction**: Extract video metadata and download videos seamlessly with native in-app streaming technology.
+- ** Fast 360p Download Standard**: Streams are optimized at 360p resolution for maximum download speeds, low latency, and efficient storage usage.
+- ** Parallel & Sequential Downloads**: Process multiple downloads simultaneously with clear multi-stage status tracking, speed metrics, and progress bars.
+- ** Smart Resume (Chunk-based Downloading)**: Automatically detects partial or interrupted downloads and resumes the task from the last saved byte offset, avoiding unnecessary data usage.
+- ** Wi-Fi Only Mode**: Prevent mobile data charges by forcing downloads to pause automatically when switching to cellular networks, resuming when connected back to Wi-Fi.
+- ** Subtitle & Closed Caption Downloader**: Fetch closed caption tracks (.srt/.vtt) automatically alongside media files.
+- ** Scoped Storage Compliance**: Fully targets Android Scoped Storage using `MediaStore` API. Downloads are placed directly into the public `Downloads` directory with **zero broad storage permissions** required.
+- ** Real-time Metrics & Persistent Logs**: View current download speed (KB/s, MB/s), progress percentages, and status alerts. Keeps a persistent log of recent download operations.
+- ** Cache Maintenance**: Monitor the size of temporary files in the app cache and clear them directly within app settings.
+- ** Modern Theme Engine**: Beautiful UI with smooth micro-animations, radial gradient accents, and dynamic support for Light Mode, Dark Mode, and System Default themes.
+- ** In-app Update Engine**: Auto-checks GitHub Releases API on startup, prompting the user with a changelog and download link when updates are available.
 
-## 📲 Installation (For Users)
+## Installation (For Users)
 
 ### Download & Install from Releases
 
@@ -154,32 +154,23 @@ The app uses **scoped storage** for modern Android compatibility and enhanced us
 ```
 
 **Key Points**:
-- ✅ **INTERNET**: Required for fetching video metadata and downloading streams from YouTube
-- ❌ **No broad storage permissions**: Uses scoped storage targeting only public media collections
-- 🔒 **Privacy-first**: No access to personal files or media
+ **INTERNET**: Required for fetching video metadata and downloading streams from YouTube
+ **No broad storage permissions**: Uses scoped storage targeting only public media collections
+ **Privacy-first**: No access to personal files or media
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Download Failures
 - Check internet connectivity
 - Verify the YouTube URL is valid and accessible
 - Ensure sufficient device storage space is available
 
-## 📝 License
+## License
 
 This project is for educational purposes. Please respect YouTube's Terms of Service and copyright laws.
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## 📧 Contact
 
