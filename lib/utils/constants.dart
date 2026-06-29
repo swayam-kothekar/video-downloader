@@ -60,12 +60,16 @@ class AppConstants {
 
   // Video Quality Options
   static const List<String> videoQualities = [
+    'Highest Available',
     '1080p',
     '720p',
     '480p',
     '360p',
     'Audio Only',
   ];
+
+  // Sentinel value for "pick highest available quality"
+  static const String qualityHighestAvailable = 'Highest Available';
 
   // Download directory name
   static const String downloadFolderName = 'YouTubeDownloads';

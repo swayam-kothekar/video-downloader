@@ -101,6 +101,7 @@ class AppTheme {
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
           statusBarBrightness: Brightness.dark,
+          systemStatusBarContrastEnforced: false,
           systemNavigationBarColor: Colors.black, // Lock navigation bar to black
           systemNavigationBarIconBrightness: Brightness.light, // Lock navigation bar icons to light
           systemNavigationBarDividerColor: Colors.transparent,
@@ -174,6 +175,11 @@ class AppTheme {
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppConstants.primary,
         linearTrackColor: AppConstants.border,
+      ),
+
+      // ListTile Theme (transparent background to prevent invisible ink splash warning)
+      listTileTheme: const ListTileThemeData(
+        tileColor: Colors.transparent,
       ),
     );
   }
@@ -275,6 +281,7 @@ class AppTheme {
            statusBarColor: Colors.transparent,
            statusBarIconBrightness: Brightness.dark,
            statusBarBrightness: Brightness.light,
+           systemStatusBarContrastEnforced: false, // Prevent Android scrim in light mode
            systemNavigationBarColor: Colors.black, // Lock navigation bar to black
            systemNavigationBarIconBrightness: Brightness.light, // Lock navigation bar icons to light
            systemNavigationBarDividerColor: Colors.transparent,
@@ -348,6 +355,11 @@ class AppTheme {
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppConstants.primary,
         linearTrackColor: Color(0xFFE4E4E7),
+      ),
+
+      // ListTile Theme (transparent background to prevent invisible ink splash warning)
+      listTileTheme: const ListTileThemeData(
+        tileColor: Colors.transparent,
       ),
     );
   }

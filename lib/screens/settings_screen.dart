@@ -81,11 +81,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Temporary cache cleared successfully',
-                  style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -104,12 +112,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Failed to clear cache: ${e.toString()}',
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -147,20 +163,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showThemeSelector(BuildContext context, ThemeProvider themeProvider) {
     final theme = Theme.of(context);
-    
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: theme.brightness == Brightness.dark ? AppConstants.surface : Colors.white,
+          backgroundColor: theme.brightness == Brightness.dark
+              ? AppConstants.surface
+              : Colors.white,
           title: Text(
             'Choose Theme',
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
             side: BorderSide(
-              color: theme.brightness == Brightness.dark ? AppConstants.border : Colors.grey[200]!,
+              color: theme.brightness == Brightness.dark
+                  ? AppConstants.border
+                  : Colors.grey[200]!,
             ),
           ),
           content: RadioGroup<ThemeMode>(
@@ -174,9 +196,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildThemeRadioOption(context, 'System Default', ThemeMode.system, themeProvider),
-                _buildThemeRadioOption(context, 'Light Theme', ThemeMode.light, themeProvider),
-                _buildThemeRadioOption(context, 'Dark Theme', ThemeMode.dark, themeProvider),
+                _buildThemeRadioOption(
+                  context,
+                  'System Default',
+                  ThemeMode.system,
+                  themeProvider,
+                ),
+                _buildThemeRadioOption(
+                  context,
+                  'Light Theme',
+                  ThemeMode.light,
+                  themeProvider,
+                ),
+                _buildThemeRadioOption(
+                  context,
+                  'Dark Theme',
+                  ThemeMode.dark,
+                  themeProvider,
+                ),
               ],
             ),
           ),
@@ -204,16 +241,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         child: Row(
           children: [
-            Radio<ThemeMode>(
-              value: mode,
-              activeColor: AppConstants.primary,
-            ),
+            Radio<ThemeMode>(value: mode, activeColor: AppConstants.primary),
             const SizedBox(width: 8),
             Text(
               label,
               style: theme.textTheme.bodyLarge?.copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected ? AppConstants.primary : theme.textTheme.bodyLarge?.color,
+                color: isSelected
+                    ? AppConstants.primary
+                    : theme.textTheme.bodyLarge?.color,
               ),
             ),
           ],
@@ -222,69 +258,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showQualitySelector(BuildContext context, ThemeProvider themeProvider) {
-    final theme = Theme.of(context);
-    
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: theme.brightness == Brightness.dark ? AppConstants.surface : Colors.white,
-          title: Text(
-            'Default Quality',
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
-            side: BorderSide(
-              color: theme.brightness == Brightness.dark ? AppConstants.border : Colors.grey[200]!,
-            ),
-          ),
-          content: RadioGroup<String>(
-            groupValue: themeProvider.defaultQuality,
-            onChanged: (val) {
-              if (val != null) {
-                themeProvider.setDefaultQuality(val);
-                Navigator.pop(context);
-              }
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: AppConstants.videoQualities.map((quality) {
-                final isSelected = themeProvider.defaultQuality == quality;
-                return InkWell(
-                  onTap: () {
-                    themeProvider.setDefaultQuality(quality);
-                    Navigator.pop(context);
-                  },
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    child: Row(
-                      children: [
-                        Radio<String>(
-                          value: quality,
-                          activeColor: AppConstants.primary,
-                        ),
-                      const SizedBox(width: 8),
-                      Text(
-                        quality,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                          color: isSelected ? AppConstants.primary : theme.textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      );
-    },
-  );
-}
+  // Quality selector commented out — quality is fixed to 360p
+  // void _showQualitySelector(BuildContext context, ThemeProvider themeProvider) {
+  //   showDialog( ... );
+  // }
 
 
   @override
@@ -300,8 +277,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else if (themeProvider.themeMode == ThemeMode.system) {
       themeText = 'System Default';
     }
-
-
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -340,14 +315,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: themeText,
                     onTap: () => _showThemeSelector(context, themeProvider),
                   ),
-                  _buildDivider(),
-                  _buildSettingTile(
-                    context,
-                    icon: Icons.hd_rounded,
-                    title: 'Default Quality',
-                    subtitle: themeProvider.defaultQuality,
-                    onTap: () => _showQualitySelector(context, themeProvider),
-                  ),
+                  // Default Quality setting hidden — quality is fixed to 360p
+                  // _buildDivider(),
+                  // _buildSettingTile(
+                  //   context,
+                  //   icon: Icons.hd_rounded,
+                  //   title: 'Default Quality',
+                  //   subtitle: themeProvider.defaultQuality,
+                  //   onTap: () => _showQualitySelector(context, themeProvider),
+                  // ),
                 ],
               ),
               const SizedBox(height: AppConstants.spaceLarge),
@@ -357,7 +333,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSettingCard(
                 context,
                 children: [
-
                   _buildSettingSwitchTile(
                     context,
                     icon: Icons.wifi_rounded,
@@ -375,7 +350,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: themeProvider.subtitleDownload,
                     onChanged: themeProvider.setSubtitleDownload,
                   ),
-
                 ],
               ),
               const SizedBox(height: AppConstants.spaceLarge),
@@ -386,6 +360,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 children: [
                   ListTile(
+                    tileColor: Colors.transparent,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppConstants.spaceMedium,
                       vertical: 6,
@@ -393,7 +368,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppConstants.primary.withValues(alpha: isDark ? 0.08 : 0.05),
+                        color: AppConstants.primary.withValues(
+                          alpha: isDark ? 0.08 : 0.05,
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -410,8 +387,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     subtitle: Text(
-                      _isLoadingCacheSize 
-                          ? 'Calculating...' 
+                      _isLoadingCacheSize
+                          ? 'Calculating...'
                           : 'Cleans up partial or failed temp logs (${_cacheSizeMB.toStringAsFixed(2)} MB)',
                       style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                     ),
@@ -438,7 +415,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.code_rounded,
                     title: 'GitHub Repository',
                     subtitle: 'View source code & contributions',
-                    onTap: () => _openUrl('https://github.com/swayam-kothekar/video-downloader'),
+                    onTap: () => _openUrl(
+                      'https://github.com/swayam-kothekar/video-downloader',
+                    ),
                   ),
                   _buildDivider(),
                   _buildSettingTile(
@@ -446,10 +425,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: Icons.bug_report_rounded,
                     title: 'Report an Issue',
                     subtitle: 'Submit bugs or request features',
-                    onTap: () => _openUrl('https://github.com/swayam-kothekar/video-downloader/issues'),
+                    onTap: () => _openUrl(
+                      'https://github.com/swayam-kothekar/video-downloader/issues',
+                    ),
                   ),
                   _buildDivider(),
                   ListTile(
+                    tileColor: Colors.transparent,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: AppConstants.spaceMedium,
                       vertical: 4,
@@ -457,7 +439,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppConstants.secondary.withValues(alpha: isDark ? 0.08 : 0.05),
+                        color: AppConstants.secondary.withValues(
+                          alpha: isDark ? 0.08 : 0.05,
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
@@ -488,11 +472,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, {String? infoText}) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    String? infoText,
+  }) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(
-        left: AppConstants.spaceSmall, 
+        left: AppConstants.spaceSmall,
         bottom: AppConstants.spaceSmall,
       ),
       child: Column(
@@ -522,7 +510,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSettingCard(BuildContext context, {required List<Widget> children}) {
+  Widget _buildSettingCard(
+    BuildContext context, {
+    required List<Widget> children,
+  }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -536,9 +527,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
       color: isDark ? AppConstants.surface : Colors.white,
-      child: Column(
-        children: children,
-      ),
+      child: Column(children: children),
     );
   }
 
@@ -553,6 +542,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return ListTile(
+      tileColor: Colors.transparent,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppConstants.spaceMedium,
         vertical: 4,
@@ -563,11 +553,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           color: AppConstants.primary.withValues(alpha: isDark ? 0.08 : 0.05),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(
-          icon,
-          color: AppConstants.primary,
-          size: 20,
-        ),
+        child: Icon(icon, color: AppConstants.primary, size: 20),
       ),
       title: Text(
         title,
@@ -601,6 +587,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDark = theme.brightness == Brightness.dark;
 
     return ListTile(
+      tileColor: Colors.transparent,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppConstants.spaceMedium,
         vertical: 4,
@@ -611,11 +598,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           color: AppConstants.primary.withValues(alpha: isDark ? 0.08 : 0.05),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(
-          icon,
-          color: AppConstants.primary,
-          size: 20,
-        ),
+        child: Icon(icon, color: AppConstants.primary, size: 20),
       ),
       title: Text(
         title,
@@ -638,10 +621,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildDivider() {
-    return const Divider(
-      height: 1,
-      indent: 64,
-      endIndent: 16,
-    );
+    return const Divider(height: 1, indent: 64, endIndent: 16);
   }
 }

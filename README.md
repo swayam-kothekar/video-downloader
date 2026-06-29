@@ -1,18 +1,18 @@
 # Video Downloader 🎥
 
-A Flutter Android application for downloading YouTube videos.
+A Flutter Android application for downloading YouTube videos directly to your device.
 
 ## ✨ Features
 
-- **🎬 YouTube Video & Audio Extraction**: Parse YouTube URLs to extract metadata. Choose from a wide range of video resolutions (144p, 240p, 360p, 480p, 720p, 1080p, 2K, 4K) or download high-bitrate M4A audio only.
-- **⚡ Parallel/Simultaneous Downloads**: Download multiple videos and audio tracks at the same time, complete with individual speed metrics, progress bars, and independent pause/cancel controls.
-- **🛠️ Smart Audio-Video Merging (FFmpeg)**: High-resolution formats on YouTube separate audio and video streams. The app automatically downloads both, then merges them on the fly using native FFmpeg (`ffmpeg_kit_flutter_new`) with fallback codec transcoders.
+- **🎬 Direct YouTube Extraction**: Extract video metadata and download videos seamlessly with native in-app streaming technology.
+- **⚡ Fast 360p Download Standard**: Streams are optimized at 360p resolution for maximum download speeds, low latency, and efficient storage usage.
+- **⚡ Parallel & Sequential Downloads**: Process multiple downloads simultaneously with clear multi-stage status tracking, speed metrics, and progress bars.
 - **🔄 Smart Resume (Chunk-based Downloading)**: Automatically detects partial or interrupted downloads and resumes the task from the last saved byte offset, avoiding unnecessary data usage.
 - **📶 Wi-Fi Only Mode**: Prevent mobile data charges by forcing downloads to pause automatically when switching to cellular networks, resuming when connected back to Wi-Fi.
-- **💬 Subtitle & Closed Caption Downloader**: Fetch closed caption tracks (.srt/.vtt) automatically in the background alongside the media files.
-- **💾 Scoped Storage Compliance**: Fully targets Android Scoped Storage using `MediaStore` API. Downloads are securely placed directly into the public `Downloads` directory, requiring **zero broad storage permissions** (such as read/write external storage).
-- **📊 Real-time Metrics & Persistent Logs**: View current download speed (KB/s, MB/s), progress percentages, and status alerts. Keeps a persistent log of the last 50 download operations.
-- **🧼 Cache Maintenance**: Monitor the size of temporary files in the app cache and clear them directly within the app settings.
+- **💬 Subtitle & Closed Caption Downloader**: Fetch closed caption tracks (.srt/.vtt) automatically alongside media files.
+- **💾 Scoped Storage Compliance**: Fully targets Android Scoped Storage using `MediaStore` API. Downloads are placed directly into the public `Downloads` directory with **zero broad storage permissions** required.
+- **📊 Real-time Metrics & Persistent Logs**: View current download speed (KB/s, MB/s), progress percentages, and status alerts. Keeps a persistent log of recent download operations.
+- **🧼 Cache Maintenance**: Monitor the size of temporary files in the app cache and clear them directly within app settings.
 - **🎨 Modern Theme Engine**: Beautiful UI with smooth micro-animations, radial gradient accents, and dynamic support for Light Mode, Dark Mode, and System Default themes.
 - **🚀 In-app Update Engine**: Auto-checks GitHub Releases API on startup, prompting the user with a changelog and download link when updates are available.
 
@@ -34,20 +34,15 @@ A Flutter Android application for downloading YouTube videos.
    - Wait for the installation to complete
    - Tap **Open** to launch the app
 
-4. **Grant Permissions**:
-   - The app will request notification permission for download progress tracking
-   - Grant the permission to enable background downloads with progress notifications
-
 ### Usage
 
 1. **Launch the app** on your Android device
 2. **Paste or enter** a YouTube video URL in the text field
 3. **Tap "Search Video"** to load video details
 4. **Review** the video preview with thumbnail, title, and file size
-5. **Select video or only audio** to be downloaded
-6. **Tap "Download"** to start the download
-7. **Monitor progress** in real-time
-8. **Access downloads** via your device's Downloads folder
+5. **Tap "Download"** to start the download
+6. **Monitor progress** in real-time on the Downloads dashboard
+7. **Access downloads** via your device's Downloads folder
 
 ---
 
@@ -58,7 +53,6 @@ A Flutter Android application for downloading YouTube videos.
 - **Flutter SDK**: Version 3.10.4 or higher
 - **Android Studio** or **VS Code** with Flutter extensions
 - **Android Device/Emulator**: Android 6.0 (API level 23) or higher
-- **FFmpeg**: Pre-configured for audio-video merging (handled via `ffmpeg_kit_flutter_new`)
 
 ### Installation
 
@@ -96,7 +90,7 @@ The app follows a clean, modular architecture:
 
 ```
 lib/
-├── main.dart                 # App entry point
+├── main.dart                 # App entry point & async startup initialization
 ├── models/                   # Data models
 │   ├── active_download.dart  # Active download tracking model
 │   ├── download_log.dart     # Completed downloads history model
@@ -123,16 +117,15 @@ lib/
     ├── app_drawer.dart       # Side navigation drawer
     ├── custom_text_field.dart# URL input text field
     ├── download_progress_card.dart # Active download status card
-    └── video_info_card.dart  # Video preview and options card
+    └── video_info_card.dart  # Video preview card
 ```
 
 ### Key Dependencies
 
 | Package | Purpose |
 |---------|---------|
-| `youtube_explode_dart` | YouTube video extraction and metadata |
+| `youtube_explode_dart` | Native YouTube stream extraction and metadata parsing |
 | `dio` | HTTP client for checking updates |
-| `ffmpeg_kit_flutter_new` | Merges audio and video streams using FFmpeg |
 | `flutter_native_splash` | Configures and generates native splash screens |
 | `path_provider` | File system path access |
 | `permission_handler` | Permission handling |
@@ -145,12 +138,11 @@ lib/
 
 ### How It Works
 
-1. **Video Extraction**: Uses `youtube_explode_dart` to extract video metadata and available streams
-2. **Quality Detection**: Identifies all available video qualities and presents them to the user
-3. **Stream Analysis**: Determines if audio and video are separate
-4. **Download Process**: Downloads video stream
-5. **Storage**: Saves final video to public Downloads folder using scoped storage
-6. **Cleanup**: Removes temporary files after successful merge
+1. **Video Extraction**: Uses `youtube_explode_dart` directly within the app to extract video metadata and stream URL links.
+2. **Stream Resolution**: Automatically resolves optimal 360p streams for instant downloading without complex setup.
+3. **Sequential Stream Downloading**: Handles dual video/audio stream processing sequentially with live state updates.
+4. **Storage**: Saves final video files directly to the public Downloads folder using Android Scoped Storage (`MediaStore`).
+5. **Cleanup**: Automatically cleans up temporary streams and buffers upon completion.
 
 ### Permissions
 
@@ -159,29 +151,21 @@ The app uses **scoped storage** for modern Android compatibility and enhanced us
 ```xml
 <!-- Required permissions in AndroidManifest.xml -->
 <uses-permission android:name="android.permission.INTERNET" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 ```
 
 **Key Points**:
-- ✅ **INTERNET**: Required for downloading videos from YouTube
-- ✅ **FOREGROUND_SERVICE**: Enables background downloads with persistent notifications
-- ✅ **POST_NOTIFICATIONS**: Shows download progress notifications (Android 13+)
-- ❌ **No broad storage permissions**: Uses scoped storage, targeting only the Downloads folder
-- 🔒 **Privacy-first**: No access to user's personal files or media
+- ✅ **INTERNET**: Required for fetching video metadata and downloading streams from YouTube
+- ❌ **No broad storage permissions**: Uses scoped storage targeting only public media collections
+- 🔒 **Privacy-first**: No access to personal files or media
 
+---
 
 ## 🐛 Troubleshooting
-
-### Permission Issues
-- The app will request notification permission on first launch (Android 13+)
-- If notifications don't appear, check Settings > Apps > Video Downloader > Notifications
 
 ### Download Failures
 - Check internet connectivity
 - Verify the YouTube URL is valid and accessible
-- Some videos may have restrictions preventing downloads
-- Ensure sufficient storage space is available
+- Ensure sufficient device storage space is available
 
 ## 📝 License
 

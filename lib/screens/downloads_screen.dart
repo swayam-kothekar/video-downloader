@@ -125,7 +125,7 @@ class DownloadsScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Quality: ${download.quality} • Speed: $speedText',
+                                      'Speed: $speedText',
                                       style: theme.textTheme.bodyMedium?.copyWith(
                                         fontSize: 11,
                                         color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6) ?? AppConstants.textSecondary,
@@ -345,26 +345,7 @@ class DownloadsScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(AppConstants.radiusSmall),
-                            border: Border.all(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: Text(
-                            log.quality,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
+
                         Expanded(
                           child: Text(
                             dateFormatter.format(log.downloadDate),

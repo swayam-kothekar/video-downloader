@@ -197,6 +197,7 @@ class AboutScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     ListTile(
+                      tileColor: Colors.transparent,
                       leading: const Icon(Icons.code_rounded, color: AppConstants.primary),
                       title: const Text('Source Code (GitHub)'),
                       subtitle: const Text('View and contribute to the repository'),
@@ -210,6 +211,7 @@ class AboutScreen extends StatelessWidget {
                       color: isDark ? AppConstants.border : Colors.grey[200],
                     ),
                     ListTile(
+                      tileColor: Colors.transparent,
                       leading: const Icon(Icons.bug_report_rounded, color: AppConstants.primary),
                       title: const Text('Submit Feedback / Issues'),
                       subtitle: const Text('Report bugs or request new features'),

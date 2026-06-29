@@ -64,11 +64,25 @@ class MainActivity : FlutterActivity() {
             throw Exception("Source file does not exist: $sourceFilePath")
         }
 
+        // Determine MIME type from file extension
+        val mimeType = when (displayName.substringAfterLast('.', "").lowercase()) {
+            "mp4" -> "video/mp4"
+            "webm" -> "video/webm"
+            "mkv" -> "video/x-matroska"
+            "mp3" -> "audio/mpeg"
+            "m4a" -> "audio/mp4"
+            "ogg" -> "audio/ogg"
+            "srt" -> "application/x-subrip"
+            "vtt" -> "text/vtt"
+            else -> "application/octet-stream"
+        }
+
         // Use MediaStore for Android 10+ (API 29+)
         val resolver = contentResolver
         val contentValues = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, displayName)
-            put(MediaStore.Downloads.MIME_TYPE, "video/mp4")
+            put(MediaStore.Downloads.MIME_TYPE, mimeType)
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
             put(MediaStore.Downloads.IS_PENDING, 1)
         }
 

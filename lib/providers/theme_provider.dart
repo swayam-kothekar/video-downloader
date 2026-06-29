@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -5,14 +6,19 @@ import 'package:path_provider/path_provider.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark;
-  String _defaultQuality = '1080p';
+  String _defaultQuality = 'Highest Available';
   bool _wifiOnly = false;
   bool _subtitleDownload = false;
+
+  final Completer<void> _loadCompleter = Completer<void>();
 
   ThemeMode get themeMode => _themeMode;
   String get defaultQuality => _defaultQuality;
   bool get wifiOnly => _wifiOnly;
   bool get subtitleDownload => _subtitleDownload;
+
+  /// Await this in main() to ensure settings are loaded before the first frame
+  Future<void> waitForLoad() => _loadCompleter.future;
 
   bool get isDarkMode {
     if (_themeMode == ThemeMode.system) {
@@ -54,6 +60,8 @@ class ThemeProvider extends ChangeNotifier {
       }
     } catch (e) {
       // Ignore load errors
+    } finally {
+      if (!_loadCompleter.isCompleted) _loadCompleter.complete();
     }
   }
 

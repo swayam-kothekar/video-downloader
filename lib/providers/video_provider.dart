@@ -2,8 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/video_info.dart';
 import '../models/download_log.dart';
@@ -11,7 +9,10 @@ import '../models/active_download.dart';
 import '../services/youtube_service.dart';
 import '../services/download_service.dart';
 import '../services/storage_service.dart';
+import '../services/foreground_service_helper.dart';
 import '../utils/validators.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+
 
 enum VideoState { idle, loading, loaded, error }
 
@@ -40,7 +41,14 @@ class VideoProvider extends ChangeNotifier {
   final Map<String, StreamSubscription<ConnectivityResult>> _connectivitySubscriptions = {};
   List<DownloadLog> _downloadLogs = [];
   
-  static const int _maxRetries = 3;
+  static const int _maxRetries = 8;
+
+  // Throttle UI notifications during downloads to avoid flooding the main
+  // isolate with hundreds of rebuilds per second (which causes the blank
+  // screen freeze when returning from background).
+  Timer? _notifyThrottle;
+  bool _notifyScheduled = false;
+  DateTime _lastSideEffectTime = DateTime(0);
 
   // Getters
   VideoState get state => _state;
@@ -100,42 +108,12 @@ class VideoProvider extends ChangeNotifier {
       _currentVideo = results[0] as VideoInfo;
       _availableStreams = results[1] as Map<String, StreamInfo>;
 
-      // Set quality based on default quality setting, falling back intelligently
-      if (_availableStreams.isNotEmpty) {
-        if (defaultQuality != null && _availableStreams.containsKey(defaultQuality)) {
-          _selectedQuality = defaultQuality;
-        } else {
-          // Filter out 'Audio Only' and sort by resolution
-          final videoQualities = _availableStreams.keys
-              .where((key) => key != 'Audio Only')
-              .toList();
-
-          if (videoQualities.isNotEmpty) {
-            videoQualities.sort((a, b) {
-              final aNum = int.tryParse(a.replaceAll('p', '')) ?? 0;
-              final bNum = int.tryParse(b.replaceAll('p', '')) ?? 0;
-              return bNum.compareTo(aNum); // Descending order
-            });
-            
-            if (defaultQuality != null) {
-              final defaultNum = int.tryParse(defaultQuality.replaceAll('p', '')) ?? 0;
-              String? bestMatch;
-              for (final q in videoQualities) {
-                final qNum = int.tryParse(q.replaceAll('p', '')) ?? 0;
-                if (qNum <= defaultNum) {
-                  bestMatch = q;
-                  break;
-                }
-              }
-              _selectedQuality = bestMatch ?? videoQualities.first;
-            } else {
-              _selectedQuality = videoQualities.first;
-            }
-          } else {
-            // If only audio is available, select it
-            _selectedQuality = _availableStreams.keys.first;
-          }
-        }
+      // Quality fixed to 360p (muxed stream — no merge needed)
+      // Falls back to the first available quality if 360p is not present
+      if (_availableStreams.containsKey('360p')) {
+        _selectedQuality = '360p';
+      } else if (_availableStreams.isNotEmpty) {
+        _selectedQuality = _availableStreams.keys.first;
       }
 
       _state = VideoState.loaded;
@@ -149,13 +127,13 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
-  /// Select a quality for download
-  void selectQuality(String quality) {
-    if (_availableStreams.containsKey(quality)) {
-      _selectedQuality = quality;
-      notifyListeners();
-    }
-  }
+  // Quality selection disabled — quality is fixed to 360p
+  // void selectQuality(String quality) {
+  //   if (_availableStreams.containsKey(quality)) {
+  //     _selectedQuality = quality;
+  //     notifyListeners();
+  //   }
+  // }
 
   /// Download the current video (async background execution)
   Future<void> downloadVideo({required bool wifiOnly, required bool subtitleDownload}) async {
@@ -172,8 +150,10 @@ class VideoProvider extends ChangeNotifier {
 
     final video = _currentVideo!;
     final quality = _selectedQuality;
-    final stream = _availableStreams[quality]!;
-    final needsMerge = quality != 'Audio Only' && stream is VideoOnlyStreamInfo;
+    final selectedStream = _availableStreams[quality];
+    final needsMerge = selectedStream != null &&
+        selectedStream is! MuxedStreamInfo &&
+        quality != 'Audio Only';
     
     // Make the download ID unique by appending a timestamp to allow simultaneous downloads of the same video quality
     final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -192,12 +172,12 @@ class VideoProvider extends ChangeNotifier {
     _activeDownloads[downloadId] = activeDownload;
     notifyListeners();
 
+
     // Start background download flow asynchronously
     _runBackgroundDownload(
       activeDownload: activeDownload,
       video: video,
       quality: quality,
-      stream: stream,
       needsMerge: needsMerge,
       wifiOnly: wifiOnly,
       subtitleDownload: subtitleDownload,
@@ -209,27 +189,29 @@ class VideoProvider extends ChangeNotifier {
     required ActiveDownload activeDownload,
     required VideoInfo? video,
     required String quality,
-    required StreamInfo? stream,
     required bool needsMerge,
     required bool wifiOnly,
     required bool subtitleDownload,
   }) async {
     final downloadId = activeDownload.id;
 
+    // Start the foreground service so Android keeps the process alive
+    // while the screen is off or the app is in the background.
+    await _startForegroundServiceIfNeeded();
+
     VideoInfo? currentVideo = video;
-    StreamInfo? currentStream = stream;
     Map<String, StreamInfo> streams = _availableStreams;
 
     try {
-      if (currentVideo == null || currentStream == null) {
+      if (currentVideo == null || streams.isEmpty) {
         currentVideo = await _youtubeService.getVideoInfo(activeDownload.videoId);
         streams = await _youtubeService.getAvailableStreams(activeDownload.videoId);
-        currentStream = streams[quality]!;
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Error preparing background download: $e\n$stack');
       activeDownload.errorMessage = 'Download failed';
       activeDownload.status = 'Error';
-      notifyListeners();
+      _notifyNow();
       return;
     }
     StreamSubscription<ConnectivityResult>? connectivitySubscription;
@@ -240,7 +222,7 @@ class VideoProvider extends ChangeNotifier {
       if (isMobile) {
         activeDownload.errorMessage = 'Download failed';
         activeDownload.status = 'Error';
-        notifyListeners();
+        _notifyNow();
         
         // Log failure
         final log = DownloadLog(
@@ -267,7 +249,7 @@ class VideoProvider extends ChangeNotifier {
           _pauseDownloadServiceCall(downloadId, needsMerge);
           activeDownload.errorMessage = 'Download paused: Cellular network detected (Wi-Fi Only Mode)';
           activeDownload.status = 'Paused';
-          notifyListeners();
+          _notifyNow();
         }
       });
       _connectivitySubscriptions[downloadId] = connectivitySubscription;
@@ -276,6 +258,18 @@ class VideoProvider extends ChangeNotifier {
     int retryCount = 0;
     while (retryCount <= _maxRetries) {
       try {
+        if (retryCount > 0) {
+          activeDownload.status = 'Refreshing download link...';
+          notifyListeners();
+          try {
+            currentVideo = await _youtubeService.getVideoInfo(activeDownload.videoId);
+            streams = await _youtubeService.getAvailableStreams(activeDownload.videoId);
+          } catch (err) {
+            debugPrint('Failed to refresh stream links on retry: $err');
+            throw Exception('Failed to refresh stream links: $err');
+          }
+        }
+
         activeDownload.status = 'Preparing download...';
         activeDownload.speed = 0.0;
         activeDownload.isMerging = false;
@@ -283,228 +277,212 @@ class VideoProvider extends ChangeNotifier {
 
         final downloadDir = await _storageService.getTempDownloadDirectory();
 
-        if (needsMerge) {
-          final videoStream = currentStream;
-          final audioStream = streams['Audio Only']!;
+        // 1. Resolve stream infos
+        final videoStream = streams[quality];
+        final audioStream = streams['Audio Only'];
 
-          final videoSize = videoStream.size.totalBytes;
-          final audioSize = audioStream.size.totalBytes;
-          activeDownload.fileSize = videoSize + audioSize;
+        if (videoStream == null && quality != 'Audio Only') {
+          throw Exception('Stream not available for quality: $quality');
+        }
 
-          final baseName = _storageService.generateFileName(
-            currentVideo.title,
-            quality,
-            'mp4',
+        // 2. Calculate estimated file size
+        int estimatedSize = 0;
+        try {
+          if (quality == 'Audio Only') {
+            estimatedSize = audioStream?.size.totalBytes ?? 0;
+          } else if (videoStream is MuxedStreamInfo) {
+            estimatedSize = videoStream.size.totalBytes;
+          } else {
+            final videoSize = videoStream?.size.totalBytes ?? 0;
+            final audioSize = audioStream?.size.totalBytes ?? 0;
+            estimatedSize = videoSize + audioSize;
+          }
+        } catch (_) {}
+
+        activeDownload.fileSize = estimatedSize;
+
+        // 3. Generate filename and temp paths
+        final extension = quality == 'Audio Only' ? 'm4a' : 'mp4';
+        final fileName = _storageService.generateFileName(
+          currentVideo!.title,
+          quality,
+          extension,
+        );
+        final fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+        final tempFilePath = '$downloadDir/${fileNameWithoutExt}_$downloadId.$extension';
+
+        activeDownload.status = 'Downloading...';
+        notifyListeners();
+
+        // When subtitles are enabled, reserve the last 10% of the progress bar
+        // for the subtitle fetch + save phase so the user doesn't see it stuck at 100%.
+        final double mediaProgressCap = subtitleDownload ? 0.90 : 1.0;
+
+        if (quality == 'Audio Only') {
+          // Audio-only stream download
+          await _downloadService.downloadStream(
+            streamInfo: audioStream!,
+            savePath: tempFilePath,
+            downloadId: downloadId,
+            onProgress: (p) {
+              activeDownload.progress = (p * mediaProgressCap).clamp(0.0, mediaProgressCap);
+              notifyListeners();
+            },
+            onSpeed: (s) {
+              activeDownload.speed = s;
+              notifyListeners();
+            },
           );
-          final baseNameWithoutExt = baseName.substring(0, baseName.lastIndexOf('.'));
-          // Use downloadId to avoid collision with other concurrent downloads of the same video + quality
-          final tempVideoPath = '$downloadDir/${baseNameWithoutExt}_${downloadId}_temp_video.mp4';
-          final tempAudioPath = '$downloadDir/${baseNameWithoutExt}_${downloadId}_temp_audio.m4a';
-
-          final tempVideoFile = File(tempVideoPath);
-          final tempAudioFile = File(tempAudioPath);
-          final int startVideoByte = tempVideoFile.existsSync() ? tempVideoFile.lengthSync() : 0;
-          final int startAudioByte = tempAudioFile.existsSync() ? tempAudioFile.lengthSync() : 0;
-
-          double videoProgress = videoSize > 0 ? startVideoByte / videoSize : 0.0;
-          double audioProgress = audioSize > 0 ? startAudioByte / audioSize : 0.0;
-
-          if (startVideoByte < videoSize) {
-            activeDownload.status = 'Downloading video...';
-            notifyListeners();
-
-            await _downloadService.downloadVideo(
-              stream: videoStream,
-              savePath: tempVideoPath,
-              downloadId: '${downloadId}_video',
-              startByte: startVideoByte,
-              onProgress: (p) {
-                videoProgress = p;
-                final totalBytes = videoSize + audioSize;
-                activeDownload.progress = totalBytes > 0 
-                    ? ((videoProgress * videoSize) + (audioProgress * audioSize)) / totalBytes
-                    : (videoProgress + audioProgress) / 2;
-                notifyListeners();
-              },
-              onSpeed: (s) {
-                activeDownload.speed = s;
-                notifyListeners();
-              },
-            );
-            videoProgress = 1.0;
-          } else {
-            videoProgress = 1.0;
-          }
-
-          if (startAudioByte < audioSize) {
-            activeDownload.status = 'Downloading audio...';
-            notifyListeners();
-
-            await _downloadService.downloadVideo(
-              stream: audioStream,
-              savePath: tempAudioPath,
-              downloadId: '${downloadId}_audio',
-              startByte: startAudioByte,
-              onProgress: (p) {
-                audioProgress = p;
-                final totalBytes = videoSize + audioSize;
-                activeDownload.progress = totalBytes > 0 
-                    ? ((videoProgress * videoSize) + (audioProgress * audioSize)) / totalBytes
-                    : (videoProgress + audioProgress) / 2;
-                notifyListeners();
-              },
-              onSpeed: (s) {
-                activeDownload.speed = s;
-                notifyListeners();
-              },
-            );
-            audioProgress = 1.0;
-          } else {
-            audioProgress = 1.0;
-          }
-
-          // Merge and finalize
-          activeDownload.status = 'Merging audio & video...';
-          activeDownload.isMerging = true;
-          notifyListeners();
-
-          final tempMergedPath = '$downloadDir/${baseNameWithoutExt}_$downloadId.mp4';
-          final session = await FFmpegKit.execute('-y -i "$tempVideoPath" -i "$tempAudioPath" -c:v copy -c:a copy "$tempMergedPath"');
-          var returnCode = await session.getReturnCode();
-
-          if (!ReturnCode.isSuccess(returnCode)) {
-            final fallbackSession = await FFmpegKit.execute('-y -i "$tempVideoPath" -i "$tempAudioPath" -c:v copy -c:a aac "$tempMergedPath"');
-            returnCode = await fallbackSession.getReturnCode();
-          }
-
-          if (ReturnCode.isSuccess(returnCode)) {
-            activeDownload.status = 'Saving to Downloads...';
-            notifyListeners();
-
-            await _storageService.saveToPublicDownloads(tempMergedPath, baseName);
-
-            if (subtitleDownload) {
-              await _downloadSubtitles(currentVideo.id, tempMergedPath, baseName);
-            }
-
-            await _storageService.deleteFile(tempVideoPath);
-            await _storageService.deleteFile(tempAudioPath);
-            await _storageService.deleteFile(tempMergedPath);
-
-            final log = DownloadLog(
-              videoTitle: currentVideo.title,
-              quality: quality,
-              downloadDate: DateTime.now(),
-              isSuccess: true,
-            );
-            _downloadLogs.insert(0, log);
-            await _storageService.saveDownloadLogs(_downloadLogs);
-
-            activeDownload.status = 'Complete';
-            activeDownload.progress = 1.0;
-            activeDownload.isMerging = false;
-            notifyListeners();
-          } else {
-            throw Exception('FFmpeg merge process failed');
-          }
+        } else if (videoStream is MuxedStreamInfo) {
+          // Muxed stream — already has audio+video combined
+          await _downloadService.downloadStream(
+            streamInfo: videoStream,
+            savePath: tempFilePath,
+            downloadId: downloadId,
+            onProgress: (p) {
+              activeDownload.progress = (p * mediaProgressCap).clamp(0.0, mediaProgressCap);
+              notifyListeners();
+            },
+            onSpeed: (s) {
+              activeDownload.speed = s;
+              notifyListeners();
+            },
+          );
         } else {
-          // Single file download
-          final fileSize = currentStream.size.totalBytes;
-          activeDownload.fileSize = fileSize;
+          // Video-only stream: download video first, then audio, then merge
+          final tempVideoPath = '$downloadDir/${fileNameWithoutExt}_${downloadId}_temp_video.mp4';
+          final tempAudioPath = '$downloadDir/${fileNameWithoutExt}_${downloadId}_temp_audio.m4a';
 
-          String extension = quality == 'Audio Only' ? 'm4a' : 'mp4';
-          final fileName = _storageService.generateFileName(
-            currentVideo.title,
-            quality,
-            extension,
+          final videoSize = videoStream?.size.totalBytes ?? 0;
+          final audioSize = audioStream?.size.totalBytes ?? 0;
+          final totalSize = videoSize + audioSize;
+
+          // Phase 1: Download video stream
+          final videoRatio = totalSize > 0 ? videoSize / totalSize : 0.8;
+
+          await _downloadService.downloadStream(
+            streamInfo: videoStream!,
+            savePath: tempVideoPath,
+            downloadId: '${downloadId}_video',
+            onProgress: (p) {
+              activeDownload.progress = (p * videoRatio * mediaProgressCap).clamp(0.0, videoRatio * mediaProgressCap);
+              notifyListeners();
+            },
+            onSpeed: (s) {
+              activeDownload.speed = s;
+              notifyListeners();
+            },
           );
-          final fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
-          // Use downloadId to avoid collision with other concurrent downloads of the same video + quality
-          final tempFilePath = '$downloadDir/${fileNameWithoutExt}_$downloadId.$extension';
 
-          final tempFile = File(tempFilePath);
-          final int startByte = tempFile.existsSync() ? tempFile.lengthSync() : 0;
+          // Phase 2: Download audio stream
+          final audioRatio = 1.0 - videoRatio;
+          activeDownload.speed = 0.0;
 
-          if (startByte < fileSize) {
-            activeDownload.status = 'Downloading...';
-            notifyListeners();
+          final audioBase = videoRatio * mediaProgressCap;
+          final audioCap = mediaProgressCap * 0.95; // leave room for merge
 
-            await _downloadService.downloadVideo(
-              stream: currentStream,
-              savePath: tempFilePath,
-              downloadId: downloadId,
-              startByte: startByte,
-              onProgress: (p) {
-                activeDownload.progress = p;
-                notifyListeners();
-              },
-              onSpeed: (s) {
-                activeDownload.speed = s;
-                notifyListeners();
-              },
-            );
+          await _downloadService.downloadStream(
+            streamInfo: audioStream!,
+            savePath: tempAudioPath,
+            downloadId: '${downloadId}_audio',
+            onProgress: (p) {
+              activeDownload.progress = (audioBase + p * audioRatio * mediaProgressCap).clamp(audioBase, audioCap);
+              notifyListeners();
+            },
+            onSpeed: (s) {
+              activeDownload.speed = s;
+              notifyListeners();
+            },
+          );
+
+          // Phase 3: Merge video + audio with ffmpeg
+          activeDownload.speed = 0.0;
+          activeDownload.isMerging = true;
+
+          final result = await Process.run('ffmpeg', [
+            '-y',
+            '-i', tempVideoPath,
+            '-i', tempAudioPath,
+            '-c:v', 'copy',
+            '-c:a', 'aac',
+            tempFilePath,
+          ]);
+
+          if (result.exitCode != 0) {
+            throw Exception('FFmpeg merge failed: ${result.stderr}');
           }
 
-          activeDownload.status = 'Saving to Downloads...';
+          activeDownload.isMerging = false;
+          activeDownload.progress = mediaProgressCap * 0.99;
+
+          await _storageService.deleteFile(tempVideoPath);
+          await _storageService.deleteFile(tempAudioPath);
+        }
+
+        await _storageService.saveToPublicDownloads(tempFilePath, fileName);
+
+        if (subtitleDownload) {
+          activeDownload.progress = 0.92;
+          activeDownload.speed = 0.0;
           notifyListeners();
 
-          await _storageService.saveToPublicDownloads(tempFilePath, fileName);
+          await _downloadSubtitles(currentVideo.id, tempFilePath, fileName);
 
-          if (subtitleDownload) {
-            await _downloadSubtitles(currentVideo.id, tempFilePath, fileName);
-          }
+          activeDownload.progress = 0.97;
+          notifyListeners();
+        }
 
-          await _storageService.deleteFile(tempFilePath);
+        await _storageService.deleteFile(tempFilePath);
 
+        activeDownload.status = 'Complete';
+        activeDownload.progress = 1.0;
+        _notifyNow();
+
+        // Clean up on success
+        _cancelConnectivitySubscription(downloadId);
+        Future.delayed(const Duration(seconds: 2), () async {
           final log = DownloadLog(
-            videoTitle: currentVideo.title,
+            videoTitle: currentVideo!.title,
             quality: quality,
             downloadDate: DateTime.now(),
             isSuccess: true,
           );
           _downloadLogs.insert(0, log);
           await _storageService.saveDownloadLogs(_downloadLogs);
-
-          activeDownload.status = 'Complete';
-          activeDownload.progress = 1.0;
-          notifyListeners();
-        }
-
-        // Clean up on success
-        _cancelConnectivitySubscription(downloadId);
-        Future.delayed(const Duration(seconds: 4), () {
           _activeDownloads.remove(downloadId);
-          notifyListeners();
+          _stopForegroundServiceIfIdle();
+          _notifyNow();
         });
         break;
-      } catch (e) {
+      } catch (e, stack) {
+        debugPrint('Error during background download (attempt $retryCount): $e\n$stack');
         if (e.toString().contains('Download paused')) {
           _cancelConnectivitySubscription(downloadId);
           activeDownload.status = 'Paused';
           activeDownload.speed = 0.0;
-          notifyListeners();
+          _notifyNow();
           return;
         }
 
         if (e.toString().contains('Download cancelled')) {
           _cancelConnectivitySubscription(downloadId);
           _activeDownloads.remove(downloadId);
-          notifyListeners();
+          _notifyNow();
           return;
         }
 
         if (retryCount < _maxRetries) {
           retryCount++;
-          activeDownload.status = 'Retrying... (Attempt $retryCount/$_maxRetries)';
-          notifyListeners();
-          await Future.delayed(const Duration(seconds: 2));
+          activeDownload.status = 'Retrying connection... ($retryCount/$_maxRetries)';
+          _notifyNow();
+          await Future.delayed(Duration(seconds: 2 + (retryCount * 2)));
           continue;
         }
 
         // Max retries exceeded
         _cancelConnectivitySubscription(downloadId);
         final log = DownloadLog(
-          videoTitle: currentVideo.title,
+          videoTitle: currentVideo?.title ?? activeDownload.videoTitle,
           quality: quality,
           downloadDate: DateTime.now(),
           isSuccess: false,
@@ -515,12 +493,13 @@ class VideoProvider extends ChangeNotifier {
 
         activeDownload.errorMessage = 'Download failed';
         activeDownload.status = 'Error';
-        notifyListeners();
+        _notifyNow();
 
         // Keep error visible for 8 seconds, then remove
         Future.delayed(const Duration(seconds: 8), () {
           _activeDownloads.remove(downloadId);
-          notifyListeners();
+          _stopForegroundServiceIfIdle();
+          _notifyNow();
         });
         break;
       }
@@ -550,6 +529,37 @@ class VideoProvider extends ChangeNotifier {
     _connectivitySubscriptions.remove(downloadId);
   }
 
+  /// Delete any temporary download files on disk for a given download
+  Future<void> _deleteTempFiles(ActiveDownload activeDownload) async {
+    try {
+      final downloadDir = await _storageService.getTempDownloadDirectory();
+      final downloadId = activeDownload.id;
+      final title = activeDownload.videoTitle;
+      final quality = activeDownload.quality;
+
+      if (activeDownload.needsMerge) {
+        final baseName = _storageService.generateFileName(title, quality, 'mp4');
+        final baseNameWithoutExt = baseName.substring(0, baseName.lastIndexOf('.'));
+        final tempVideoPath = '$downloadDir/${baseNameWithoutExt}_${downloadId}_temp_video.mp4';
+        final tempAudioPath = '$downloadDir/${baseNameWithoutExt}_${downloadId}_temp_audio.m4a';
+        final tempMergedPath = '$downloadDir/${baseNameWithoutExt}_$downloadId.mp4';
+
+        await _storageService.deleteFile(tempVideoPath);
+        await _storageService.deleteFile(tempAudioPath);
+        await _storageService.deleteFile(tempMergedPath);
+      } else {
+        final extension = quality == 'Audio Only' ? 'm4a' : 'mp4';
+        final fileName = _storageService.generateFileName(title, quality, extension);
+        final fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+        final tempFilePath = '$downloadDir/${fileNameWithoutExt}_$downloadId.$extension';
+
+        await _storageService.deleteFile(tempFilePath);
+      }
+    } catch (e) {
+      debugPrint('Error deleting temp files: $e');
+    }
+  }
+
   /// Cancel an ongoing active download
   void cancelDownload(String downloadId) {
     final activeDownload = _activeDownloads[downloadId];
@@ -557,7 +567,9 @@ class VideoProvider extends ChangeNotifier {
     
     _cancelDownloadServiceCall(downloadId, activeDownload.needsMerge);
     _cancelConnectivitySubscription(downloadId);
+    _deleteTempFiles(activeDownload);
     _activeDownloads.remove(downloadId);
+    _stopForegroundServiceIfIdle();
     notifyListeners();
   }
 
@@ -570,7 +582,8 @@ class VideoProvider extends ChangeNotifier {
     _cancelConnectivitySubscription(downloadId);
     activeDownload.status = 'Paused';
     activeDownload.speed = 0.0;
-    notifyListeners();
+    _stopForegroundServiceIfIdle();
+    _notifyNow();
   }
 
   /// Resume a paused download
@@ -587,7 +600,6 @@ class VideoProvider extends ChangeNotifier {
       activeDownload: activeDownload,
       video: null,
       quality: activeDownload.quality,
-      stream: null,
       needsMerge: activeDownload.needsMerge,
       wifiOnly: wifiOnly,
       subtitleDownload: subtitleDownload,
@@ -640,7 +652,7 @@ class VideoProvider extends ChangeNotifier {
     final errorStr = e.toString();
     
     if (errorStr.contains('RequestLimitExceededException') || errorStr.contains('rate limiting') || errorStr.contains('429')) {
-      return 'YouTube is temporarily rate-limiting requests. Please wait a few minutes and try again.';
+      return 'Something went wrong. Please try again later.';
     } else if (errorStr.contains('SocketException') || errorStr.contains('NetworkInfo') || errorStr.contains('Failed host lookup') || errorStr.contains('Network unreachable')) {
       return 'No internet connection. Please check your network and try again.';
     } else if (errorStr.contains('VideoUnplayableException') || errorStr.contains('private') || errorStr.contains('requires sign-in') || errorStr.contains('Login required')) {
@@ -663,12 +675,19 @@ class VideoProvider extends ChangeNotifier {
       debugPrint('VideoProvider: Fetching subtitle closed captions...');
       final manifest = await _youtubeService.getClosedCaptionManifest(videoId);
       if (manifest.tracks.isNotEmpty) {
-        // Try English first, then first available
+        // Try English first (manual, then auto-generated), then first available
         ClosedCaptionTrackInfo? trackInfo;
         try {
+          // First try manually-authored English captions
           final englishTracks = manifest.getByLanguage('en');
           if (englishTracks.isNotEmpty) {
             trackInfo = englishTracks.first;
+          } else {
+            // Most videos only have auto-generated captions
+            final autoEnglishTracks = manifest.getByLanguage('en', autoGenerated: true);
+            if (autoEnglishTracks.isNotEmpty) {
+              trackInfo = autoEnglishTracks.first;
+            }
           }
         } catch (_) {}
         trackInfo ??= manifest.tracks.first;
@@ -727,8 +746,113 @@ class VideoProvider extends ChangeNotifier {
     return '$hours:$minutes:$seconds,$milliseconds';
   }
 
+
+
+  /// Start foreground service if not already running.
+  Future<void> _startForegroundServiceIfNeeded() async {
+    try {
+      final runningCount = activeDownloadsCount;
+      await ForegroundServiceHelper.start(
+        'Downloading...',
+        '$runningCount download${runningCount == 1 ? '' : 's'} in progress',
+      );
+    } catch (e) {
+      debugPrint('Failed to start foreground service: $e');
+    }
+  }
+
+  /// Stop foreground service when no active (non-paused, non-error, non-complete) downloads remain.
+  void _stopForegroundServiceIfIdle() {
+    final hasActiveRunningTasks = _activeDownloads.values.any(
+      (d) => d.status != 'Paused' && d.status != 'Error' && d.status != 'Complete',
+    );
+    if (!hasActiveRunningTasks) {
+      ForegroundServiceHelper.stop();
+    }
+  }
+
+  @override
+  void notifyListeners() {
+    // When downloads are active, throttle UI rebuilds to ~4 per second.
+    // This prevents hundreds of rebuilds/sec from data-chunk callbacks and
+    // eliminates the freeze/blank screen when returning from background.
+    if (_activeDownloads.isNotEmpty && _hasRunningDownloads()) {
+      // Throttle heavy platform-channel side-effects to ~once per second
+      final now = DateTime.now();
+      if (now.difference(_lastSideEffectTime).inMilliseconds > 1000) {
+        _lastSideEffectTime = now;
+        _updateWakelock();
+        _updateForegroundNotification();
+      }
+
+      if (!_notifyScheduled) {
+        _notifyScheduled = true;
+        _notifyThrottle?.cancel();
+        _notifyThrottle = Timer(const Duration(milliseconds: 250), () {
+          _notifyScheduled = false;
+          super.notifyListeners();
+        });
+      }
+    } else {
+      // No active downloads — notify immediately for instant UI feedback
+      _updateWakelock();
+      _updateForegroundNotification();
+      super.notifyListeners();
+    }
+  }
+
+  /// Force an immediate notification, bypassing the throttle.
+  /// Use for critical state transitions (Complete, Error, Paused).
+  void _notifyNow() {
+    _notifyThrottle?.cancel();
+    _notifyScheduled = false;
+    _updateWakelock();
+    _updateForegroundNotification();
+    super.notifyListeners();
+  }
+
+  bool _hasRunningDownloads() {
+    return _activeDownloads.values.any(
+      (d) => d.status != 'Paused' && d.status != 'Error' && d.status != 'Complete',
+    );
+  }
+
+  void _updateForegroundNotification() {
+    try {
+      final hasActiveRunningTasks = _activeDownloads.values.any(
+        (d) => d.status != 'Paused' && d.status != 'Error' && d.status != 'Complete',
+      );
+      if (hasActiveRunningTasks) {
+        final runningCount = _activeDownloads.values
+            .where((d) => d.status != 'Paused' && d.status != 'Error' && d.status != 'Complete')
+            .length;
+        ForegroundServiceHelper.update(
+          'Downloading...',
+          '$runningCount download${runningCount == 1 ? '' : 's'} in progress',
+        );
+      }
+    } catch (_) {}
+  }
+
+  void _updateWakelock() {
+    try {
+      final hasActiveRunningTasks = _activeDownloads.values.any(
+        (d) => d.status != 'Paused' && d.status != 'Error' && d.status != 'Complete',
+      );
+      if (hasActiveRunningTasks) {
+        WakelockPlus.enable();
+      } else {
+        WakelockPlus.disable();
+      }
+    } catch (_) {}
+  }
+
   @override
   void dispose() {
+    _notifyThrottle?.cancel();
+    try {
+      WakelockPlus.disable();
+    } catch (_) {}
     for (final sub in _connectivitySubscriptions.values) {
       sub.cancel();
     }

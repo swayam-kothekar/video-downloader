@@ -44,6 +44,7 @@ dependencies:
   
   # HTTP client for downloads
   dio: ^5.4.0
+  http: ^1.1.0
   
   # Image caching
   cached_network_image: ^3.3.0
@@ -66,6 +67,10 @@ dependencies:
 
   # Splash screen management in app code
   flutter_native_splash: ^2.3.10
+
+  # Foreground service to keep downloads alive when app is cleared
+  flutter_foreground_task: ^8.15.0
+  wakelock_plus: ^1.6.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -63,7 +63,7 @@ class StorageService {
         ? safeTitle.substring(0, maxLength)
         : safeTitle;
 
-    return '${truncatedTitle}_$quality.$extension';
+    return '$truncatedTitle.$extension';
   }
 
   /// Check if a file exists

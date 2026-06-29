@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import '../services/update_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -30,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen>
   void initState() {
     super.initState();
     _setupShareListener();
-    
+
     // Remove the splash screen once the first frame is painted
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForUpdates();
@@ -52,8 +53,14 @@ class _HomeScreenState extends State<HomeScreen>
 
           if (_isValidUrl) {
             final provider = Provider.of<VideoProvider>(context, listen: false);
-            final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-            provider.fetchVideoInfo(sharedUrl, defaultQuality: themeProvider.defaultQuality);
+            final themeProvider = Provider.of<ThemeProvider>(
+              context,
+              listen: false,
+            );
+            provider.fetchVideoInfo(
+              sharedUrl,
+              defaultQuality: themeProvider.defaultQuality,
+            );
           }
         }
       }
@@ -71,6 +78,8 @@ class _HomeScreenState extends State<HomeScreen>
       _videoProvider = provider;
       _videoProvider?.addListener(_onProviderStateChanged);
     }
+    // Precache the drawer logo so it's ready when drawer first opens
+    precacheImage(const AssetImage('assets/images/logo.png'), context);
   }
 
   @override
@@ -155,194 +164,199 @@ class _HomeScreenState extends State<HomeScreen>
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      drawer: const AppDrawer(activeRoute: 'downloader'),
-      body: GestureDetector(
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              colors: [
-                isDark
-                    ? const Color(0xFF111224)
-                    : const Color(0xFFEDF0FA), // premium ambient top glow
-                theme.scaffoldBackgroundColor,
-              ],
-              center: const Alignment(0.0, -0.9),
-              radius: 1.3,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        drawer: const RepaintBoundary(
+          child: AppDrawer(activeRoute: 'downloader'),
+        ),
+        body: GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                colors: [
+                  isDark
+                      ? const Color(0xFF111224)
+                      : const Color(0xFFEDF0FA), // premium ambient top glow
+                  theme.scaffoldBackgroundColor,
+                ],
+                center: const Alignment(0.0, -0.9),
+                radius: 1.3,
+              ),
             ),
-          ),
-          child: SafeArea(
-            child: Consumer<VideoProvider>(
-              builder: (context, provider, child) {
-                // Calculate responsive top padding to center search inputs vertically when empty (accounting for HeroSection)
-                final bool showCentered =
-                    provider.currentVideo == null &&
-                    provider.state != VideoState.loading;
-                final double rawPadding =
-                    (MediaQuery.of(context).size.height - 440) / 2 -
-                    MediaQuery.of(context).padding.top -
-                    56;
-                final double topPadding = showCentered
-                    ? (rawPadding > 0 ? rawPadding : 0.0)
-                    : 0.0;
+            child: SafeArea(
+              child: Consumer<VideoProvider>(
+                builder: (context, provider, child) {
+                  // Calculate responsive top padding to center search inputs vertically when empty (accounting for HeroSection)
+                  final bool showCentered =
+                      provider.currentVideo == null &&
+                      provider.state != VideoState.loading;
+                  final double rawPadding =
+                      (MediaQuery.of(context).size.height - 440) / 2 -
+                      MediaQuery.of(context).padding.top -
+                      56;
+                  final double topPadding = showCentered
+                      ? (rawPadding > 0 ? rawPadding : 0.0)
+                      : 0.0;
 
-                return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    // Minimal App Bar
-                    SliverAppBar(
-                      floating: true,
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      scrolledUnderElevation: 0,
-                      leading: Builder(
-                        builder: (context) => IconButton(
-                          icon: Icon(
-                            Icons.menu_rounded,
-                            color: theme.textTheme.bodyMedium?.color,
-                            size: 20,
-                          ),
-                          onPressed: () {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            Scaffold.of(context).openDrawer();
-                          },
-                          tooltip: 'Open Menu',
-                        ),
-                      ),
-                      systemOverlayStyle: SystemUiOverlayStyle(
-                        statusBarColor: Colors.transparent,
-                        statusBarIconBrightness: isDark
-                            ? Brightness.light
-                            : Brightness.dark,
-                        statusBarBrightness: isDark
-                            ? Brightness.dark
-                            : Brightness.light,
-                        systemNavigationBarColor:
-                            Colors.black, // Lock navigation bar to black
-                        systemNavigationBarIconBrightness: Brightness
-                            .light, // Lock navigation bar icons to light
-                      ),
-                      title: RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.4,
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'Video',
-                              style: TextStyle(
-                                color: theme.textTheme.displayLarge?.color,
-                              ),
-                            ),
-                            const TextSpan(
-                              text: 'Downloader',
-                              style: TextStyle(color: AppConstants.primary),
-                            ),
-                          ],
-                        ),
-                      ),
-                      centerTitle: true,
-                      actions: [
-                        IconButton(
-                          icon: Badge(
-                            isLabelVisible: provider.activeDownloadsCount > 0,
-                            largeSize: 12,
-                            label: Text(
-                              provider.activeDownloadsCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 7.5,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.history_rounded,
+                  return CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      // Minimal App Bar
+                      SliverAppBar(
+                        floating: true,
+                        backgroundColor: Colors.transparent,
+                        elevation: 0,
+                        scrolledUnderElevation: 0,
+                        leading: Builder(
+                          builder: (context) => IconButton(
+                            icon: Icon(
+                              Icons.menu_rounded,
                               color: theme.textTheme.bodyMedium?.color,
                               size: 20,
                             ),
+                            onPressed: () {
+                              Scaffold.of(context).openDrawer();
+                              FocusManager.instance.primaryFocus?.unfocus();
+                            },
+                            tooltip: 'Open Menu',
                           ),
-                          onPressed: () {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            Navigator.push(
-                              context,
-                              SmoothPageRoute(child: const DownloadsScreen()),
-                            );
-                          },
-                          tooltip: 'Downloads History',
                         ),
-                        const SizedBox(width: AppConstants.spaceSmall),
-                      ],
-                    ),
-
-                    // Space animator to center inputs smoothly
-                    SliverToBoxAdapter(
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 800),
-                        curve: const Cubic(
-                          0.16,
-                          1,
-                          0.3,
-                          1,
-                        ), // easeOutExpo for super smooth layout shift
-                        height: topPadding,
-                      ),
-                    ),
-
-                    // Main Content List
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.spaceMedium,
-                        vertical: AppConstants.spaceSmall,
-                      ),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          const SizedBox(height: AppConstants.spaceSmall),
-
-                          // Premium Hero Section Widget (with smooth height/opacity transitions)
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 600),
-                            curve: const Cubic(0.16, 1, 0.3, 1),
-                            child: AnimatedOpacity(
-                              duration: const Duration(milliseconds: 400),
-                              curve: Curves.easeInOut,
-                              opacity: showCentered ? 1.0 : 0.0,
-                              child: showCentered
-                                  ? const HeroSection()
-                                  : const SizedBox.shrink(),
+                        systemOverlayStyle: SystemUiOverlayStyle(
+                          statusBarColor: Colors.transparent,
+                          statusBarIconBrightness: isDark
+                              ? Brightness.light
+                              : Brightness.dark,
+                          statusBarBrightness: isDark
+                              ? Brightness.dark
+                              : Brightness.light,
+                          systemStatusBarContrastEnforced:
+                              false, // Prevent Android from adding a dark scrim in light mode
+                          systemNavigationBarColor:
+                              Colors.black, // Lock navigation bar to black
+                          systemNavigationBarIconBrightness: Brightness
+                              .light, // Lock navigation bar icons to light
+                          systemNavigationBarContrastEnforced: false,
+                        ),
+                        title: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.4,
                             ),
+                            children: [
+                              TextSpan(
+                                text: 'Video',
+                                style: TextStyle(
+                                  color: theme.textTheme.displayLarge?.color,
+                                ),
+                              ),
+                              const TextSpan(
+                                text: 'Downloader',
+                                style: TextStyle(color: AppConstants.primary),
+                              ),
+                            ],
                           ),
-
-                          // URL Input Field
-                          CustomTextField(
-                            controller: _urlController,
-                            hintText: 'Paste YouTube video link here...',
-                            isValid: _isValidUrl,
-                            errorText: null, // Shown via SnackBar instead
-                            onChanged: _validateUrl,
-                            onPaste: _pasteFromClipboard,
-                            onClear: _clearUrl,
+                        ),
+                        centerTitle: true,
+                        actions: [
+                          IconButton(
+                            icon: Badge(
+                              isLabelVisible: provider.activeDownloadsCount > 0,
+                              largeSize: 12,
+                              label: Text(
+                                provider.activeDownloadsCount.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 7.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.history_rounded,
+                                color: theme.textTheme.bodyMedium?.color,
+                                size: 20,
+                              ),
+                            ),
+                            onPressed: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              Navigator.push(
+                                context,
+                                SmoothPageRoute(child: const DownloadsScreen()),
+                              );
+                            },
+                            tooltip: 'Downloads History',
                           ),
-                          const SizedBox(height: AppConstants.spaceMedium),
-
-                          // Analyze URL Button
-                          _buildGetInfoButton(provider),
-
-                          const SizedBox(height: AppConstants.spaceLarge),
-                          _buildStatefulContent(provider, context),
-                        ]),
+                          const SizedBox(width: AppConstants.spaceSmall),
+                        ],
                       ),
-                    ),
-                  ],
-                );
-              },
+
+                      // Space animator to center inputs smoothly
+                      SliverToBoxAdapter(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 800),
+                          curve: const Cubic(
+                            0.16,
+                            1,
+                            0.3,
+                            1,
+                          ), // easeOutExpo for super smooth layout shift
+                          height: topPadding,
+                        ),
+                      ),
+
+                      // Main Content List
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.spaceMedium,
+                          vertical: AppConstants.spaceSmall,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            const SizedBox(height: AppConstants.spaceSmall),
+
+                            // Premium Hero Section Widget (with smooth height/opacity transitions)
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 600),
+                              curve: const Cubic(0.16, 1, 0.3, 1),
+                              child: AnimatedOpacity(
+                                duration: const Duration(milliseconds: 400),
+                                curve: Curves.easeInOut,
+                                opacity: showCentered ? 1.0 : 0.0,
+                                child: showCentered
+                                    ? const HeroSection()
+                                    : const SizedBox.shrink(),
+                              ),
+                            ),
+
+                            // URL Input Field
+                            CustomTextField(
+                              controller: _urlController,
+                              hintText: 'Paste YouTube video link here...',
+                              isValid: _isValidUrl,
+                              errorText: null, // Shown via SnackBar instead
+                              onChanged: _validateUrl,
+                              onPaste: _pasteFromClipboard,
+                              onClear: _clearUrl,
+                            ),
+                            const SizedBox(height: AppConstants.spaceMedium),
+
+                            // Analyze URL Button
+                            _buildGetInfoButton(provider),
+
+                            const SizedBox(height: AppConstants.spaceLarge),
+                            _buildStatefulContent(provider, context),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -359,8 +373,14 @@ class _HomeScreenState extends State<HomeScreen>
         onPressed: isEnabled && !isLoading
             ? () {
                 FocusManager.instance.primaryFocus?.unfocus();
-                final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-                provider.fetchVideoInfo(_urlController.text, defaultQuality: themeProvider.defaultQuality);
+                final themeProvider = Provider.of<ThemeProvider>(
+                  context,
+                  listen: false,
+                );
+                provider.fetchVideoInfo(
+                  _urlController.text,
+                  defaultQuality: themeProvider.defaultQuality,
+                );
               }
             : null, // Disabled when loading or when URL is invalid (greys out!)
         style: ElevatedButton.styleFrom(
@@ -420,64 +440,30 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildQualitySelector(VideoProvider provider) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final borderColor = isDark ? AppConstants.border : const Color(0xFFE4E4E7);
+  // Quality selector commented out — quality is fixed to 360p
+  // Widget _buildQualitySelector(VideoProvider provider) {
+  //   final theme = Theme.of(context);
+  //   final isDark = theme.brightness == Brightness.dark;
+  //   final borderColor = isDark ? AppConstants.border : const Color(0xFFE4E4E7);
+  //   return Container(
+  //     height: 48,
+  //     child: Row(
+  //       children: [
+  //         DropdownButton<String>(
+  //           value: provider.selectedQuality,
+  //           items: provider.availableQualities.map((quality) {
+  //             return DropdownMenuItem(value: quality, child: Text(quality));
+  //           }).toList(),
+  //           onChanged: (value) {
+  //             if (value != null) provider.selectQuality(value);
+  //           },
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
-    return Container(
-      height: 48,
-      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMedium),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-        border: Border.all(color: borderColor, width: 1),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.tune_rounded, color: AppConstants.primary, size: 18),
-          const SizedBox(width: AppConstants.spaceSmall),
-          Text(
-            'Quality:',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: theme.textTheme.bodyLarge?.color,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(width: AppConstants.spaceSmall),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: provider.selectedQuality,
-                dropdownColor: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: theme.textTheme.bodyLarge?.color,
-                ),
-                icon: Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: theme.textTheme.bodyMedium?.color,
-                  size: 18,
-                ),
-                items: provider.availableQualities.map((quality) {
-                  return DropdownMenuItem(value: quality, child: Text(quality));
-                }).toList(),
-                onChanged: (value) {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  if (value != null) {
-                    provider.selectQuality(value);
-                  }
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showWifiOnlyWarningDialog(
     BuildContext context,
@@ -485,26 +471,36 @@ class _HomeScreenState extends State<HomeScreen>
     VideoProvider provider,
   ) {
     final theme = Theme.of(context);
-    
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: theme.brightness == Brightness.dark ? AppConstants.surface : Colors.white,
+          backgroundColor: theme.brightness == Brightness.dark
+              ? AppConstants.surface
+              : Colors.white,
           title: Row(
             children: [
-              const Icon(Icons.wifi_off_rounded, color: AppConstants.warning, size: 24),
+              const Icon(
+                Icons.wifi_off_rounded,
+                color: AppConstants.warning,
+                size: 24,
+              ),
               const SizedBox(width: 12),
               Text(
                 'Wi-Fi Only Enabled',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppConstants.radiusLarge),
             side: BorderSide(
-              color: theme.brightness == Brightness.dark ? AppConstants.border : Colors.grey[200]!,
+              color: theme.brightness == Brightness.dark
+                  ? AppConstants.border
+                  : Colors.grey[200]!,
             ),
           ),
           content: Text(
@@ -560,9 +556,7 @@ class _HomeScreenState extends State<HomeScreen>
               height: 14,
               child: CircularProgressIndicator(
                 strokeWidth: 1.5,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.white,
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
             ),
             const SizedBox(width: AppConstants.spaceMedium),
@@ -580,9 +574,7 @@ class _HomeScreenState extends State<HomeScreen>
         backgroundColor: isDark ? AppConstants.surface : Colors.grey[900],
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-            AppConstants.radiusMedium,
-          ),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
           side: BorderSide(
             color: isDark ? AppConstants.border : Colors.transparent,
             width: 1,
@@ -592,10 +584,7 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
-    Navigator.push(
-      context,
-      SmoothPageRoute(child: const DownloadsScreen()),
-    );
+    Navigator.push(context, SmoothPageRoute(child: const DownloadsScreen()));
   }
 
   Widget _buildDownloadButton(VideoProvider provider, BuildContext context) {
@@ -611,14 +600,21 @@ class _HomeScreenState extends State<HomeScreen>
             ? null
             : () async {
                 FocusManager.instance.primaryFocus?.unfocus();
-                final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-                
+                final themeProvider = Provider.of<ThemeProvider>(
+                  context,
+                  listen: false,
+                );
+
                 if (themeProvider.wifiOnly) {
                   final result = await Connectivity().checkConnectivity();
                   final isMobile = result == ConnectivityResult.mobile;
                   if (isMobile) {
                     if (context.mounted) {
-                      _showWifiOnlyWarningDialog(context, themeProvider, provider);
+                      _showWifiOnlyWarningDialog(
+                        context,
+                        themeProvider,
+                        provider,
+                      );
                     }
                   } else {
                     if (context.mounted) {
@@ -688,8 +684,9 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             VideoInfoCard(video: provider.currentVideo!),
             const SizedBox(height: AppConstants.spaceLarge),
-            _buildQualitySelector(provider),
-            const SizedBox(height: AppConstants.spaceMedium),
+            // Quality selector hidden — quality fixed to 360p
+            // _buildQualitySelector(provider),
+            // const SizedBox(height: AppConstants.spaceMedium),
             _buildDownloadButton(provider, context),
           ],
         ),
@@ -766,7 +763,9 @@ class _HomeScreenState extends State<HomeScreen>
               Expanded(
                 child: Text(
                   'New Update Available',
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -796,7 +795,9 @@ class _HomeScreenState extends State<HomeScreen>
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDark ? AppConstants.background : Colors.grey[50],
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
                   border: Border.all(
                     color: isDark ? AppConstants.border : Colors.grey[200]!,
                   ),
@@ -842,7 +843,9 @@ class _HomeScreenState extends State<HomeScreen>
                 backgroundColor: AppConstants.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.radiusMedium,
+                  ),
                 ),
                 elevation: 0,
               ),
@@ -1113,7 +1116,9 @@ class HeroSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: AppConstants.primary.withValues(alpha: isDark ? 0.3 : 0.15),
+                  color: AppConstants.primary.withValues(
+                    alpha: isDark ? 0.3 : 0.15,
+                  ),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -1121,10 +1126,7 @@ class HeroSection extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                'assets/images/logo.png',
-                fit: BoxFit.cover,
-              ),
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
             ),
           ),
           const SizedBox(height: AppConstants.spaceLarge),
@@ -1148,7 +1150,7 @@ class HeroSection extends StatelessWidget {
               horizontal: AppConstants.spaceMedium,
             ),
             child: Text(
-              'Download YouTube videos in high resolutions or extract high-quality audio. Free, private, and fully open source.',
+              'Fast and reliable YouTube downloads powered by direct stream processing. Free, private, and fully open source.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13,
@@ -1167,8 +1169,8 @@ class HeroSection extends StatelessWidget {
             runSpacing: AppConstants.spaceSmall,
             alignment: WrapAlignment.center,
             children: [
-              _buildBadge(context, Icons.hd_rounded, 'Full HD Video'),
-              _buildBadge(context, Icons.music_note_rounded, 'HQ Audio'),
+              _buildBadge(context, Icons.block_rounded, 'Ad-Free'),
+              _buildBadge(context, Icons.shield_outlined, 'Private & Safe'),
               _buildBadge(context, Icons.code_rounded, 'Open Source'),
             ],
           ),
@@ -1211,5 +1213,4 @@ class HeroSection extends StatelessWidget {
       ),
     );
   }
-
 }

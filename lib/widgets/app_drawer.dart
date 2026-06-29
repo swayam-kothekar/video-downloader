@@ -233,7 +233,7 @@ class AppDrawer extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'High-quality media extraction',
+            'Fast & private media downloader',
             style: theme.textTheme.bodyMedium?.copyWith(
               fontSize: 11,
               color: AppConstants.textMuted,
