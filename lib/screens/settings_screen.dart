@@ -258,11 +258,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Quality selector commented out — quality is fixed to 360p
-  // void _showQualitySelector(BuildContext context, ThemeProvider themeProvider) {
-  //   showDialog( ... );
-  // }
-
 
   @override
   Widget build(BuildContext context) {
@@ -315,15 +310,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: themeText,
                     onTap: () => _showThemeSelector(context, themeProvider),
                   ),
-                  // Default Quality setting hidden — quality is fixed to 360p
-                  // _buildDivider(),
-                  // _buildSettingTile(
-                  //   context,
-                  //   icon: Icons.hd_rounded,
-                  //   title: 'Default Quality',
-                  //   subtitle: themeProvider.defaultQuality,
-                  //   onTap: () => _showQualitySelector(context, themeProvider),
-                  // ),
                 ],
               ),
               const SizedBox(height: AppConstants.spaceLarge),

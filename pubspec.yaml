@@ -62,8 +62,6 @@ dependencies:
   # Date formatting
   intl: ^0.18.1
   
-  # Background downloads
-  ffmpeg_kit_flutter_new: ^4.2.1
 
   # Splash screen management in app code
   flutter_native_splash: ^2.3.10

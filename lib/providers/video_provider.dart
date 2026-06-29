@@ -127,14 +127,6 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
-  // Quality selection disabled — quality is fixed to 360p
-  // void selectQuality(String quality) {
-  //   if (_availableStreams.containsKey(quality)) {
-  //     _selectedQuality = quality;
-  //     notifyListeners();
-  //   }
-  // }
-
   /// Download the current video (async background execution)
   Future<void> downloadVideo({required bool wifiOnly, required bool subtitleDownload}) async {
     debugPrint('VideoProvider: downloadVideo() called');

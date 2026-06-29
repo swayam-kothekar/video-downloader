@@ -440,29 +440,6 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Quality selector commented out — quality is fixed to 360p
-  // Widget _buildQualitySelector(VideoProvider provider) {
-  //   final theme = Theme.of(context);
-  //   final isDark = theme.brightness == Brightness.dark;
-  //   final borderColor = isDark ? AppConstants.border : const Color(0xFFE4E4E7);
-  //   return Container(
-  //     height: 48,
-  //     child: Row(
-  //       children: [
-  //         DropdownButton<String>(
-  //           value: provider.selectedQuality,
-  //           items: provider.availableQualities.map((quality) {
-  //             return DropdownMenuItem(value: quality, child: Text(quality));
-  //           }).toList(),
-  //           onChanged: (value) {
-  //             if (value != null) provider.selectQuality(value);
-  //           },
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
 
 
   void _showWifiOnlyWarningDialog(
@@ -684,9 +661,6 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             VideoInfoCard(video: provider.currentVideo!),
             const SizedBox(height: AppConstants.spaceLarge),
-            // Quality selector hidden — quality fixed to 360p
-            // _buildQualitySelector(provider),
-            // const SizedBox(height: AppConstants.spaceMedium),
             _buildDownloadButton(provider, context),
           ],
         ),
