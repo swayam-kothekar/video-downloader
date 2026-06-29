@@ -97,10 +97,10 @@ class DownloadsScreen extends StatelessWidget {
                             Text(
                               'Active Tasks',
                               style: theme.textTheme.headlineMedium?.copyWith(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6) ?? AppConstants.textSecondary,
-                                letterSpacing: 0.5,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: theme.textTheme.displayLarge?.color ?? (isDark ? Colors.white : Colors.black),
+                                letterSpacing: 0.2,
                               ),
                             ),
                             const SizedBox(height: AppConstants.spaceSmall + 2),
@@ -128,7 +128,7 @@ class DownloadsScreen extends StatelessWidget {
                                       'Speed: $speedText',
                                       style: theme.textTheme.bodyMedium?.copyWith(
                                         fontSize: 11,
-                                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6) ?? AppConstants.textSecondary,
+                                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.75) ?? AppConstants.textSecondary,
                                       ),
                                     ),
                                     const SizedBox(height: AppConstants.spaceSmall),
@@ -161,10 +161,10 @@ class DownloadsScreen extends StatelessWidget {
                             Text(
                               'Task History',
                               style: theme.textTheme.headlineMedium?.copyWith(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6) ?? AppConstants.textSecondary,
-                                letterSpacing: 0.5,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: theme.textTheme.displayLarge?.color ?? (isDark ? Colors.white : Colors.black),
+                                letterSpacing: 0.2,
                               ),
                             ),
                             const SizedBox(height: AppConstants.spaceMedium),
@@ -172,6 +172,41 @@ class DownloadsScreen extends StatelessWidget {
                               (log) => _buildHistoryItem(context, log, provider),
                             ),
                           ],
+
+                          // Footer note for storage location
+                          const SizedBox(height: AppConstants.spaceSmall),
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: AppConstants.spaceMedium, vertical: AppConstants.spaceSmall),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 0.5),
+                                    child: Icon(
+                                      Icons.folder_open_rounded,
+                                      size: 14,
+                                      color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.85) ?? (isDark ? Colors.white70 : Colors.black87),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      'Videos are saved in your device\'s Downloads folder',
+                                      textAlign: TextAlign.center,
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.85) ?? (isDark ? Colors.white70 : Colors.black87),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppConstants.spaceMedium),
                         ]),
                       ),
                     ),
