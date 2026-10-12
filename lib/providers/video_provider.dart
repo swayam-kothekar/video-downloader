@@ -9,6 +9,7 @@ import '../models/active_download.dart';
 import '../services/youtube_service.dart';
 import '../services/download_service.dart';
 import '../services/storage_service.dart';
+import '../services/social_media_service.dart';
 import '../services/foreground_service_helper.dart';
 import '../utils/validators.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -20,12 +21,14 @@ class VideoProvider extends ChangeNotifier {
   final YouTubeService _youtubeService;
   final DownloadService _downloadService;
   final StorageService _storageService;
+  final SocialMediaService _socialMediaService;
 
   VideoProvider(
     this._youtubeService,
     this._downloadService,
-    this._storageService,
-  ) {
+    this._storageService, [
+    SocialMediaService? socialMediaService,
+  ])  : _socialMediaService = socialMediaService ?? SocialMediaService() {
     _loadDownloadLogs();
   }
 
@@ -33,6 +36,7 @@ class VideoProvider extends ChangeNotifier {
   VideoState _state = VideoState.idle;
   VideoInfo? _currentVideo;
   Map<String, StreamInfo> _availableStreams = {};
+  Map<String, String> _socialQualities = {};
   String _selectedQuality = '360p';
   String? _errorMessage;
   
@@ -55,6 +59,9 @@ class VideoProvider extends ChangeNotifier {
   VideoInfo? get currentVideo => _currentVideo;
   Map<String, StreamInfo> get availableStreams => _availableStreams;
   List<String> get availableQualities {
+    if (_currentVideo != null && _currentVideo!.platform != 'youtube' && _socialQualities.isNotEmpty) {
+      return _socialQualities.keys.toList();
+    }
     final qualities = _availableStreams.keys.toList();
     qualities.sort((a, b) {
       if (a == 'Audio Only') return 1;
@@ -95,25 +102,45 @@ class VideoProvider extends ChangeNotifier {
         normalizedUrl = 'https://$normalizedUrl';
       }
 
-      final videoId = Validators.extractVideoId(normalizedUrl);
-      if (videoId == null) {
-        throw Exception('Invalid YouTube URL');
+      final platform = Validators.getPlatformType(normalizedUrl);
+      if (platform == PlatformType.unknown) {
+        throw Exception('Please enter a valid YouTube, Instagram, Facebook, or Twitter/X link');
       }
 
-      final results = await Future.wait([
-        _youtubeService.getVideoInfo(normalizedUrl),
-        _youtubeService.getAvailableStreams(videoId),
-      ]);
+      if (platform == PlatformType.youtube) {
+        final videoId = Validators.extractVideoId(normalizedUrl);
+        if (videoId == null) {
+          throw Exception('Invalid YouTube URL');
+        }
 
-      _currentVideo = results[0] as VideoInfo;
-      _availableStreams = results[1] as Map<String, StreamInfo>;
+        final results = await Future.wait([
+          _youtubeService.getVideoInfo(normalizedUrl),
+          _youtubeService.getAvailableStreams(videoId),
+        ]);
 
-      // Quality fixed to 360p (muxed stream — no merge needed)
-      // Falls back to the first available quality if 360p is not present
-      if (_availableStreams.containsKey('360p')) {
-        _selectedQuality = '360p';
-      } else if (_availableStreams.isNotEmpty) {
-        _selectedQuality = _availableStreams.keys.first;
+        _currentVideo = results[0] as VideoInfo;
+        _availableStreams = results[1] as Map<String, StreamInfo>;
+        _socialQualities = {};
+
+        // Quality fixed to 360p (muxed stream — no merge needed)
+        // Falls back to the first available quality if 360p is not present
+        if (_availableStreams.containsKey('360p')) {
+          _selectedQuality = '360p';
+        } else if (_availableStreams.isNotEmpty) {
+          _selectedQuality = _availableStreams.keys.first;
+        }
+      } else {
+        // Instagram or Facebook
+        final socialResult = await _socialMediaService.getVideoData(normalizedUrl, platform);
+        _currentVideo = socialResult.videoInfo;
+        _availableStreams = {};
+        _socialQualities = socialResult.qualities;
+
+        if (_socialQualities.isNotEmpty) {
+          _selectedQuality = _socialQualities.keys.first;
+        } else {
+          _selectedQuality = 'HD';
+        }
       }
 
       _state = VideoState.loaded;
@@ -123,6 +150,7 @@ class VideoProvider extends ChangeNotifier {
       _errorMessage = _parseExceptionMessage(e);
       _currentVideo = null;
       _availableStreams = {};
+      _socialQualities = {};
       notifyListeners();
     }
   }
@@ -131,10 +159,18 @@ class VideoProvider extends ChangeNotifier {
   Future<void> downloadVideo({required bool wifiOnly, required bool subtitleDownload}) async {
     debugPrint('VideoProvider: downloadVideo() called');
 
-    if (_currentVideo == null ||
-        !_availableStreams.containsKey(_selectedQuality)) {
-      debugPrint('VideoProvider: No video or quality not available');
-      _errorMessage = 'No video selected or quality not available';
+    if (_currentVideo == null) {
+      debugPrint('VideoProvider: No video selected');
+      _errorMessage = 'No video selected';
+      _state = VideoState.error;
+      notifyListeners();
+      return;
+    }
+
+    final isYoutube = _currentVideo!.platform == 'youtube';
+    if (isYoutube && !_availableStreams.containsKey(_selectedQuality)) {
+      debugPrint('VideoProvider: Quality not available');
+      _errorMessage = 'Quality not available';
       _state = VideoState.error;
       notifyListeners();
       return;
@@ -142,7 +178,7 @@ class VideoProvider extends ChangeNotifier {
 
     final video = _currentVideo!;
     final quality = _selectedQuality;
-    final selectedStream = _availableStreams[quality];
+    final selectedStream = isYoutube ? _availableStreams[quality] : null;
     final needsMerge = selectedStream != null &&
         selectedStream is! MuxedStreamInfo &&
         quality != 'Audio Only';
@@ -163,7 +199,6 @@ class VideoProvider extends ChangeNotifier {
 
     _activeDownloads[downloadId] = activeDownload;
     notifyListeners();
-
 
     // Start background download flow asynchronously
     _runBackgroundDownload(
@@ -190,6 +225,17 @@ class VideoProvider extends ChangeNotifier {
     // Start the foreground service so Android keeps the process alive
     // while the screen is off or the app is in the background.
     await _startForegroundServiceIfNeeded();
+
+    final isYoutube = video?.platform == 'youtube';
+    if (!isYoutube && video != null) {
+      await _runSocialMediaBackgroundDownload(
+        activeDownload: activeDownload,
+        video: video,
+        quality: quality,
+        wifiOnly: wifiOnly,
+      );
+      return;
+    }
 
     VideoInfo? currentVideo = video;
     Map<String, StreamInfo> streams = _availableStreams;
@@ -498,6 +544,153 @@ class VideoProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _runSocialMediaBackgroundDownload({
+    required ActiveDownload activeDownload,
+    required VideoInfo video,
+    required String quality,
+    required bool wifiOnly,
+  }) async {
+    final downloadId = activeDownload.id;
+
+    if (wifiOnly) {
+      final result = await Connectivity().checkConnectivity();
+      if (result == ConnectivityResult.mobile) {
+        activeDownload.errorMessage = 'Download paused: Cellular network detected (Wi-Fi Only Mode)';
+        activeDownload.status = 'Error';
+        _notifyNow();
+
+        final log = DownloadLog(
+          videoTitle: video.title,
+          quality: quality,
+          downloadDate: DateTime.now(),
+          isSuccess: false,
+          errorMessage: 'Download failed: Cellular network detected (Wi-Fi Only Mode)',
+        );
+        _downloadLogs.insert(0, log);
+        await _storageService.saveDownloadLogs(_downloadLogs);
+
+        Future.delayed(const Duration(seconds: 5), () {
+          _activeDownloads.remove(downloadId);
+          _stopForegroundServiceIfIdle();
+          notifyListeners();
+        });
+        return;
+      }
+    }
+
+    int retryCount = 0;
+    while (retryCount <= _maxRetries) {
+      try {
+        activeDownload.status = 'Preparing download...';
+        activeDownload.speed = 0.0;
+        activeDownload.isMerging = false;
+        notifyListeners();
+
+        // Get direct media URL
+        String? directUrl = video.directMediaUrls[quality] ??
+            _socialQualities[quality] ??
+            (video.directMediaUrls.isNotEmpty ? video.directMediaUrls.values.first : null);
+
+        if (directUrl == null || directUrl.isEmpty) {
+          final platform = Validators.getPlatformType(video.channelId.isNotEmpty ? video.channelId : video.platform);
+          final res = await _socialMediaService.getVideoData(video.id, platform);
+          directUrl = res.qualities[quality] ?? (res.qualities.isNotEmpty ? res.qualities.values.first : null);
+        }
+
+        if (directUrl == null || directUrl.isEmpty) {
+          throw Exception('No direct media stream found for this video');
+        }
+
+        final downloadDir = await _storageService.getTempDownloadDirectory();
+        final fileName = _storageService.generateFileName(video.title, quality, 'mp4');
+        final fileNameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+        final tempFilePath = '$downloadDir/${fileNameWithoutExt}_$downloadId.mp4';
+
+        activeDownload.status = 'Downloading...';
+        notifyListeners();
+
+        await _downloadService.downloadFromUrl(
+          url: directUrl,
+          savePath: tempFilePath,
+          downloadId: downloadId,
+          onProgress: (p) {
+            activeDownload.progress = p;
+            notifyListeners();
+          },
+          onSpeed: (s) {
+            activeDownload.speed = s;
+            notifyListeners();
+          },
+        );
+
+        await _storageService.saveToPublicDownloads(tempFilePath, fileName);
+        await _storageService.deleteFile(tempFilePath);
+
+        activeDownload.status = 'Complete';
+        activeDownload.progress = 1.0;
+        _notifyNow();
+
+        Future.delayed(const Duration(seconds: 2), () async {
+          final log = DownloadLog(
+            videoTitle: video.title,
+            quality: quality,
+            downloadDate: DateTime.now(),
+            isSuccess: true,
+          );
+          _downloadLogs.insert(0, log);
+          await _storageService.saveDownloadLogs(_downloadLogs);
+          _activeDownloads.remove(downloadId);
+          _stopForegroundServiceIfIdle();
+          _notifyNow();
+        });
+        break;
+      } catch (e, stack) {
+        debugPrint('Social download error (attempt $retryCount): $e\n$stack');
+        if (e.toString().contains('Download paused')) {
+          activeDownload.status = 'Paused';
+          activeDownload.speed = 0.0;
+          _notifyNow();
+          return;
+        }
+        if (e.toString().contains('Download cancelled')) {
+          _activeDownloads.remove(downloadId);
+          _stopForegroundServiceIfIdle();
+          _notifyNow();
+          return;
+        }
+
+        if (retryCount < _maxRetries) {
+          retryCount++;
+          activeDownload.status = 'Retrying connection... ($retryCount/$_maxRetries)';
+          _notifyNow();
+          await Future.delayed(Duration(seconds: 2 + (retryCount * 2)));
+          continue;
+        }
+
+        final log = DownloadLog(
+          videoTitle: video.title,
+          quality: quality,
+          downloadDate: DateTime.now(),
+          isSuccess: false,
+          errorMessage: 'Download failed: ${e.toString()}',
+        );
+        _downloadLogs.insert(0, log);
+        await _storageService.saveDownloadLogs(_downloadLogs);
+
+        activeDownload.errorMessage = 'Download failed';
+        activeDownload.status = 'Error';
+        _notifyNow();
+
+        Future.delayed(const Duration(seconds: 8), () {
+          _activeDownloads.remove(downloadId);
+          _stopForegroundServiceIfIdle();
+          _notifyNow();
+        });
+        break;
+      }
+    }
+  }
+
   void _cancelDownloadServiceCall(String downloadId, bool needsMerge) {
     if (needsMerge) {
       _downloadService.cancelDownload('${downloadId}_video');
@@ -603,6 +796,7 @@ class VideoProvider extends ChangeNotifier {
     _state = VideoState.idle;
     _currentVideo = null;
     _availableStreams = {};
+    _socialQualities = {};
     _selectedQuality = '360p';
     _errorMessage = null;
     notifyListeners();
@@ -851,6 +1045,7 @@ class VideoProvider extends ChangeNotifier {
     _connectivitySubscriptions.clear();
     _youtubeService.dispose();
     _downloadService.dispose();
+    _socialMediaService.dispose();
     super.dispose();
   }
 }

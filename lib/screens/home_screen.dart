@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen>
       if (sharedUrl != null && sharedUrl.isNotEmpty && mounted) {
         setState(() {
           _urlController.text = sharedUrl;
-          _isValidUrl = Validators.isValidYouTubeUrl(sharedUrl);
+          _isValidUrl = Validators.isValidUrl(sharedUrl);
         });
 
         if (_isValidUrl) {
@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _validateUrl(String url) {
     setState(() {
-      _isValidUrl = Validators.isValidYouTubeUrl(url);
+      _isValidUrl = Validators.isValidUrl(url);
     });
   }
 
@@ -345,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen>
                             // URL Input Field
                             CustomTextField(
                               controller: _urlController,
-                              hintText: 'Paste YouTube video link here...',
+                              hintText: 'Paste video link (YouTube, Instagram, Facebook, X)...',
                               isValid: _isValidUrl,
                               errorText: null, // Shown via SnackBar instead
                               onChanged: _validateUrl,
@@ -1136,7 +1136,7 @@ class HeroSection extends StatelessWidget {
               horizontal: AppConstants.spaceMedium,
             ),
             child: Text(
-              'Fast and reliable YouTube downloads powered by direct stream processing. Free, private, and fully open source.',
+              'Fast and reliable downloads for YouTube, Instagram Reels, Facebook & X videos. Free, private, and fully open source.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontSize: 13,
@@ -1147,7 +1147,21 @@ class HeroSection extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: AppConstants.spaceLarge),
+          const SizedBox(height: AppConstants.spaceMedium),
+
+          // Supported platforms pills
+          Wrap(
+            spacing: AppConstants.spaceSmall,
+            runSpacing: AppConstants.spaceSmall,
+            alignment: WrapAlignment.center,
+            children: [
+              _buildPlatformChip(context, Icons.play_circle_fill_rounded, 'YouTube', const Color(0xFFFF0000)),
+              _buildPlatformChip(context, Icons.camera_alt_rounded, 'Instagram Reels', const Color(0xFFE1306C)),
+              _buildPlatformChip(context, Icons.video_collection_rounded, 'Facebook Video', const Color(0xFF1877F2)),
+              _buildPlatformChip(context, Icons.alternate_email_rounded, 'X / Twitter', const Color(0xFF1DA1F2)),
+            ],
+          ),
+          const SizedBox(height: AppConstants.spaceSmall + 2),
 
           // Modern capability chips
           Wrap(
@@ -1193,6 +1207,38 @@ class HeroSection extends StatelessWidget {
               color: AppConstants.primary,
               fontSize: 10,
               fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlatformChip(BuildContext context, IconData icon, String label, Color accentColor) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF18181B) : Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSmall + 4),
+        border: Border.all(
+          color: isDark ? const Color(0xFF27272A) : const Color(0xFFE4E4E7),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: accentColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.2,
             ),
           ),
         ],

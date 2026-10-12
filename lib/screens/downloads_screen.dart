@@ -279,7 +279,7 @@ class DownloadsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppConstants.spaceSmall),
                 Text(
-                  'Your downloaded videos will appear here. Start downloading your favorite YouTube content!',
+                  'Your downloaded videos will appear here. Start downloading your favorite videos and reels!',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 13,

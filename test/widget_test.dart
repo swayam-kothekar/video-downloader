@@ -14,5 +14,6 @@ void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(MyApp(themeProvider: ThemeProvider()));
+    await tester.pump(const Duration(seconds: 1));
   });
 }

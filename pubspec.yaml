@@ -69,6 +69,7 @@ dependencies:
   # Foreground service to keep downloads alive when app is cleared
   flutter_foreground_task: ^8.15.0
   wakelock_plus: ^1.6.1
+  direct_link: ^0.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

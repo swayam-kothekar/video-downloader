@@ -8,6 +8,8 @@ class VideoInfo {
   final int viewCount;
   final String description;
   final DateTime uploadDate;
+  final String platform;
+  final Map<String, String> directMediaUrls;
 
   VideoInfo({
     required this.id,
@@ -19,7 +21,11 @@ class VideoInfo {
     required this.viewCount,
     required this.description,
     required this.uploadDate,
+    this.platform = 'youtube',
+    this.directMediaUrls = const {},
   });
+
+  bool get isSocialMedia => platform.toLowerCase() != 'youtube';
 
   Map<String, dynamic> toJson() {
     return {
@@ -32,6 +38,8 @@ class VideoInfo {
       'viewCount': viewCount,
       'description': description,
       'uploadDate': uploadDate.toIso8601String(),
+      'platform': platform,
+      'directMediaUrls': directMediaUrls,
     };
   }
 
@@ -46,6 +54,10 @@ class VideoInfo {
       viewCount: json['viewCount'] as int,
       description: json['description'] as String,
       uploadDate: DateTime.parse(json['uploadDate'] as String),
+      platform: json['platform'] as String? ?? 'youtube',
+      directMediaUrls: (json['directMediaUrls'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, v.toString())) ??
+          const {},
     );
   }
 }

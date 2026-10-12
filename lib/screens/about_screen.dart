@@ -125,7 +125,7 @@ class AboutScreen extends StatelessWidget {
                   vertical: AppConstants.spaceSmall,
                 ),
                 child: Text(
-                  'Video Downloader is an open-source utility for Android that simplifies video and audio acquisition from YouTube. Built with Flutter, it focuses on high performance, beautiful aesthetics, and complete user privacy with zero tracking.',
+                  'Video Downloader is an open-source utility for Android that simplifies video and audio acquisition from YouTube, Instagram, Facebook, and Twitter/X. Built with Flutter, it focuses on high performance, beautiful aesthetics, and complete user privacy with zero tracking.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     height: 1.6,
@@ -177,7 +177,7 @@ class AboutScreen extends StatelessWidget {
                     _buildFlatInfoRow(
                       context,
                       label: 'Tech Stack',
-                      value: 'Flutter, Dart, FFmpeg',
+                      value: 'Flutter, DirectLink, FFmpeg',
                     ),
                     _buildFlatDivider(isDark),
                     _buildFlatInfoRow(
