@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppConstants {
   // App Information
   static const String appName = 'Video Downloader';
-  static const String appVersion = '2.0.0';
+  static const String appVersion = '2.1.0';
 
   // Neutral Theme Colors (Zinc design system)
   static const Color background = Color(0xFF09090B); // Zinc 950 (Scaffold background)
