@@ -1,4 +1,48 @@
-# Video Downloader 🎥
+<div align="center">
+  <img src="assets/images/logo_transparent.png" width="96" alt="Video Downloader Logo" />
+
+  # Video Downloader
+
+  **A Flutter Android Application for Downloading YouTube Videos**
+
+  <p>
+    A Flutter Android application for downloading YouTube videos directly to your device. Extract video metadata and download streams seamlessly with native in-app processing, chunk-based smart resume, Wi-Fi only mode, and Android Scoped Storage compliance with zero broad storage permissions.
+  </p>
+
+  <p>
+    <a href="https://github.com/swayam-kothekar/video-downloader/releases"><strong>Download Latest APK »</strong></a>
+  </p>
+
+  <p>
+    <a href="#-overview">Overview</a> &middot;
+    <a href="#-features">Features</a> &middot;
+    <a href="#-installation-for-users">Installation</a> &middot;
+    <a href="#usage">Usage</a> &middot;
+    <a href="#️-development-setup-for-developers">Development Setup</a> &middot;
+    <a href="#️-technical-details">Technical Details</a>
+  </p>
+
+  <p>
+    <a href="https://github.com/swayam-kothekar/video-downloader/releases"><img src="https://img.shields.io/badge/DOWNLOAD-LATEST%20APK-7c3aed?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" /></a>
+    <img src="https://img.shields.io/badge/STORAGE-SCOPED%20STORAGE-059669?style=for-the-badge" alt="Scoped Storage" />
+    <img src="https://img.shields.io/badge/ARCHITECTURE-MODULAR-6366f1?style=for-the-badge" alt="Modular Architecture" />
+    <br />
+    <img src="https://img.shields.io/badge/LICENSE-EDUCATIONAL-3b82f6?style=for-the-badge" alt="Educational License" />
+  </p>
+
+  <p>
+    <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" /></a>
+    <a href="https://dart.dev"><img src="https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart" /></a>
+    <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" /></a>
+    <a href="https://pub.dev/packages/youtube_explode_dart"><img src="https://img.shields.io/badge/YouTube_Explode-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Explode Dart" /></a>
+    <a href="https://pub.dev/packages/dio"><img src="https://img.shields.io/badge/Dio-2684FF?style=for-the-badge" alt="Dio" /></a>
+    <a href="https://pub.dev/packages/provider"><img src="https://img.shields.io/badge/Provider-5C6BC0?style=for-the-badge" alt="Provider" /></a>
+  </p>
+</div>
+
+---
+
+## 📖 Overview
 
 A Flutter Android application for downloading YouTube videos directly to your device.
 
